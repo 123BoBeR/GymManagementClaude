@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-speedometer2 me-2" style="color:#e94560"></i>Dashboard</h1>
+  <p>Przegląd systemu zarządzania siłownią</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="ico" style="background:#dbeafe"><i class="bi bi-people-fill text-primary"></i></div>
+      </div>
+      <div class="val">{{ stats.members }}</div>
+      <div class="lbl">Klientów</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="ico" style="background:#dcfce7"><i class="bi bi-person-badge-fill text-success"></i></div>
+      </div>
+      <div class="val">{{ stats.trainers }}</div>
+      <div class="lbl">Trenerów</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="ico" style="background:#ede9fe"><i class="bi bi-calendar3-week" style="color:#7c3aed"></i></div>
+      </div>
+      <div class="val">{{ stats.classes }}</div>
+      <div class="lbl">Zajęć w tygodniu</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="stat-card">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div class="ico" style="background:#fef3c7"><i class="bi bi-bookmark-check-fill" style="color:#d97706"></i></div>
+      </div>
+      <div class="val">{{ stats.bookings }}</div>
+      <div class="lbl">Aktywnych rezerwacji</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-clock-history me-2" style="color:#e94560"></i>Ostatnie rezerwacje</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if recent_bookings %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Klient</th>
+          <th>Zajęcia</th>
+          <th>Trener</th>
+          <th>Data rezerwacji</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in recent_bookings %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ b.member.first_name }} {{ b.member.last_name }}</td>
+          <td>{{ b.gym_class.name }}</td>
+          <td>{{ b.gym_class.trainer.first_name }} {{ b.gym_class.trainer.last_name }}</td>
+          <td class="text-muted">{{ b.booked_at.strftime('%d.%m.%Y %H:%M') }}</td>
+          <td>
+            {% if b.status == 'confirmed' %}
+              <span class="badge bg-success">Potwierdzona</span>
+            {% else %}
+              <span class="badge bg-secondary">Anulowana</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-4 mb-0">Brak rezerwacji</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

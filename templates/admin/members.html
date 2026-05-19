@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Klienci — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-people-fill me-2" style="color:#e94560"></i>Klienci</h1>
+    <p>Lista wszystkich zarejestrowanych klientów</p>
+  </div>
+  <a href="/admin/members/new" class="btn btn-sm mt-1"
+     style="background:#e94560;color:#fff;border-radius:8px">
+    <i class="bi bi-plus-lg"></i> Dodaj klienta
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if members %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:30px">#</th>
+          <th>Imię i nazwisko</th>
+          <th>Login</th>
+          <th>Telefon</th>
+          <th>Karnet</th>
+          <th>Ważny do</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td class="ps-3 text-muted small">{{ m.id }}</td>
+          <td><strong>{{ m.first_name }} {{ m.last_name }}</strong></td>
+          <td><code style="font-size:.82rem">{{ m.user.username }}</code></td>
+          <td class="text-muted">{{ m.phone or '—' }}</td>
+          <td>
+            {% if m.subscription_type == 'monthly' %}
+              <span class="badge badge-monthly">Miesięczny</span>
+            {% elif m.subscription_type == 'annual' %}
+              <span class="badge badge-annual">Roczny</span>
+            {% else %}
+              <span class="badge badge-day">Dzienny</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">
+            {{ m.subscription_end.strftime('%d.%m.%Y') if m.subscription_end else '—' }}
+          </td>
+          <td>
+            {% if m.subscription_end and m.subscription_end >= today %}
+              <span class="badge bg-success">Aktywny</span>
+            {% else %}
+              <span class="badge bg-danger">Wygasły</span>
+            {% endif %}
+          </td>
+          <td class="pe-3">
+            <a href="/admin/members/{{ m.id }}/edit"
+               class="btn btn-sm btn-outline-secondary me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form action="/admin/members/{{ m.id }}/delete" method="POST" class="d-inline"
+                  onsubmit="return confirm('Usunąć klienta {{ m.first_name }} {{ m.last_name }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">Brak klientów. <a href="/admin/members/new">Dodaj pierwszego.</a></p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

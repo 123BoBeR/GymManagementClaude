@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Harmonogram — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-calendar3-week me-2" style="color:#e94560"></i>Harmonogram</h1>
+  <p>Twoje zajęcia w tygodniu</p>
+</div>
+
+{% if classes %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Dzień</th>
+          <th>Godzina</th>
+          <th>Zajęcia</th>
+          <th>Opis</th>
+          <th>Czas</th>
+          <th>Miejsca</th>
+          <th>Zapisy</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% set current_day = namespace(val='') %}
+        {% for c in classes %}
+        {% if c.schedule_day != current_day.val %}
+          {% set current_day.val = c.schedule_day %}
+          <tr style="background:#f8fafc">
+            <td colspan="7" class="ps-3 fw-bold" style="font-size:.82rem;color:#475569;
+                text-transform:uppercase;letter-spacing:.5px;padding:.45rem 1rem">
+              {{ c.schedule_day }}
+            </td>
+          </tr>
+        {% endif %}
+        {% set cnt = booking_counts[c.id] %}
+        <tr>
+          <td class="ps-3 text-muted" style="font-size:.8rem">—</td>
+          <td class="fw-bold">{{ c.schedule_time }}</td>
+          <td class="fw-semibold">{{ c.name }}</td>
+          <td class="text-muted" style="font-size:.82rem;max-width:220px">
+            {{ c.description[:60] ~ '…' if c.description and c.description|length > 60 else c.description or '—' }}
+          </td>
+          <td class="text-muted">{{ c.duration_minutes }} min</td>
+          <td class="text-muted">{{ c.max_capacity }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress" style="height:6px;width:60px">
+                <div class="progress-bar
+                  {% if cnt >= c.max_capacity %}bg-danger
+                  {% elif cnt >= c.max_capacity * 0.7 %}bg-warning
+                  {% else %}bg-success{% endif %}"
+                  style="width:{{ [(cnt / c.max_capacity * 100)|int, 100]|min }}%">
+                </div>
+              </div>
+              <span style="font-size:.8rem;color:#64748b">{{ cnt }}/{{ c.max_capacity }}</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    Nie masz jeszcze przypisanych żadnych zajęć.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-speedometer2 me-2" style="color:#e94560"></i>Dashboard</h1>
+  <p>Witaj, {{ trainer.first_name }}! Oto Twoje podsumowanie na dziś.</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="ico mb-2" style="background:#dbeafe"><i class="bi bi-calendar3-week text-primary"></i></div>
+      <div class="val">{{ trainer.classes | length }}</div>
+      <div class="lbl">Zajęcia łącznie</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="ico mb-2" style="background:#dcfce7"><i class="bi bi-people-fill text-success"></i></div>
+      <div class="val">{{ total_members }}</div>
+      <div class="lbl">Unikalnych klientów</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card">
+      <div class="ico mb-2" style="background:#fef3c7"><i class="bi bi-currency-dollar" style="color:#d97706"></i></div>
+      <div class="val">{{ '%.0f'|format(trainer.hourly_rate) if trainer.hourly_rate else '—' }} zł</div>
+      <div class="lbl">Stawka / godzina</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">
+        <h5>
+          <i class="bi bi-calendar-day me-2" style="color:#e94560"></i>
+          Dziś — {{ today_name or 'brak zajęć' }}
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if today_classes %}
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-3">Zajęcia</th>
+              <th>Godzina</th>
+              <th>Czas</th>
+              <th>Zapisy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in today_classes %}
+            <tr>
+              <td class="ps-3 fw-semibold">{{ c.name }}</td>
+              <td>{{ c.schedule_time }}</td>
+              <td class="text-muted">{{ c.duration_minutes }} min</td>
+              <td>
+                {% set cnt = c.bookings | selectattr('status','eq','confirmed') | list | length %}
+                <span class="badge {% if cnt >= c.max_capacity %}bg-danger{% else %}bg-success{% endif %}">
+                  {{ cnt }}/{{ c.max_capacity }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted text-center py-4 mb-0">Brak zajęć na dziś.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-info-circle me-2" style="color:#6366f1"></i>Mój profil</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0" style="font-size:.88rem">
+          <dt class="col-5 text-muted fw-normal">Imię i nazwisko</dt>
+          <dd class="col-7 fw-semibold">{{ trainer.first_name }} {{ trainer.last_name }}</dd>
+          <dt class="col-5 text-muted fw-normal">Specjalizacja</dt>
+          <dd class="col-7">{{ trainer.specialization or '—' }}</dd>
+          <dt class="col-5 text-muted fw-normal">Login</dt>
+          <dd class="col-7"><code>{{ trainer.user.username }}</code></dd>
+        </dl>
+        <div class="mt-3">
+          <a href="/trainer/schedule" class="btn btn-sm w-100"
+             style="background:#6366f1;color:#fff;border-radius:8px;font-weight:600">
+            <i class="bi bi-calendar3-week me-1"></i> Zobacz pełny harmonogram
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Trenerzy — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-badge-fill me-2" style="color:#e94560"></i>Trenerzy</h1>
+  <p>Kadra instruktorów siłowni</p>
+</div>
+
+<div class="row g-3">
+  {% for t in trainers %}
+  <div class="col-md-6 col-xl-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:48px;height:48px;border-radius:50%;background:#e94560;
+                      display:flex;align-items:center;justify-content:center;
+                      color:#fff;font-size:1.2rem;font-weight:700;flex-shrink:0">
+            {{ t.first_name[0] }}{{ t.last_name[0] }}
+          </div>
+          <div>
+            <div class="fw-bold">{{ t.first_name }} {{ t.last_name }}</div>
+            <div style="font-size:.82rem;color:#64748b">
+              <code>{{ t.user.username }}</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-2" style="font-size:.87rem">
+          <i class="bi bi-star-fill me-1" style="color:#f59e0b"></i>
+          <span class="text-muted">Specjalizacja:</span>
+          {{ t.specialization or '—' }}
+        </div>
+        <div class="mb-2" style="font-size:.87rem">
+          <i class="bi bi-currency-dollar me-1" style="color:#22c55e"></i>
+          <span class="text-muted">Stawka:</span>
+          {{ '%.0f zł/h' | format(t.hourly_rate) if t.hourly_rate else '—' }}
+        </div>
+        <div style="font-size:.87rem">
+          <i class="bi bi-calendar3 me-1" style="color:#6366f1"></i>
+          <span class="text-muted">Zajęcia:</span>
+          {{ t.classes | length }}
+        </div>
+
+        <hr class="my-3">
+        <div class="d-flex flex-wrap gap-1">
+          {% for c in t.classes %}
+            <span class="badge" style="background:#f1f5f9;color:#475569;font-weight:500;font-size:.75rem">
+              {{ c.schedule_day }} {{ c.schedule_time }}
+            </span>
+          {% else %}
+            <span class="text-muted" style="font-size:.82rem">Brak przypisanych zajęć</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col">
+    <p class="text-muted text-center py-5">Brak trenerów w systemie.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

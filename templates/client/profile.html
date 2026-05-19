@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Profil — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-fill me-2" style="color:#e94560"></i>Mój Profil</h1>
+  <p>Twoje dane i szczegóły karnetu</p>
+</div>
+
+<div class="row g-3">
+  <!-- Avatar + dane -->
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <div style="width:80px;height:80px;border-radius:50%;background:#e94560;
+                    display:flex;align-items:center;justify-content:center;
+                    color:#fff;font-size:2rem;font-weight:700;margin:0 auto 1rem">
+          {{ member.first_name[0] }}{{ member.last_name[0] }}
+        </div>
+        <h5 class="fw-bold mb-0">{{ member.first_name }} {{ member.last_name }}</h5>
+        <div class="text-muted mt-1 mb-3" style="font-size:.85rem">
+          <code>{{ member.user.username }}</code>
+        </div>
+        <span class="badge bg-success px-3 py-2">Klient siłowni</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dane szczegółowe -->
+  <div class="col-md-8">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5><i class="bi bi-person-lines-fill me-2" style="color:#6366f1"></i>Dane osobowe</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0" style="font-size:.9rem">
+          <dt class="col-sm-4 text-muted fw-normal">Imię</dt>
+          <dd class="col-sm-8 fw-semibold">{{ member.first_name }}</dd>
+          <dt class="col-sm-4 text-muted fw-normal">Nazwisko</dt>
+          <dd class="col-sm-8 fw-semibold">{{ member.last_name }}</dd>
+          <dt class="col-sm-4 text-muted fw-normal">Telefon</dt>
+          <dd class="col-sm-8">{{ member.phone or '—' }}</dd>
+          <dt class="col-sm-4 text-muted fw-normal">Dołączył/a</dt>
+          <dd class="col-sm-8">{{ member.joined_at.strftime('%d.%m.%Y') if member.joined_at else '—' }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5><i class="bi bi-credit-card-fill me-2" style="color:#e94560"></i>Karnet</h5>
+        {% if member.subscription_end and member.subscription_end >= today %}
+          <span class="badge bg-success">Aktywny</span>
+        {% else %}
+          <span class="badge bg-danger">Wygasły</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0" style="font-size:.9rem">
+          <dt class="col-sm-4 text-muted fw-normal">Typ</dt>
+          <dd class="col-sm-8 fw-semibold">
+            {% if member.subscription_type == 'monthly' %}
+              <span class="badge badge-monthly">Miesięczny</span>
+            {% elif member.subscription_type == 'annual' %}
+              <span class="badge badge-annual">Roczny</span>
+            {% else %}
+              <span class="badge badge-day">Karnet dzienny</span>
+            {% endif %}
+          </dd>
+          <dt class="col-sm-4 text-muted fw-normal">Ważny do</dt>
+          <dd class="col-sm-8 fw-semibold">
+            {{ member.subscription_end.strftime('%d.%m.%Y') if member.subscription_end else '—' }}
+          </dd>
+          {% if days_left is not none %}
+          <dt class="col-sm-4 text-muted fw-normal">Pozostało</dt>
+          <dd class="col-sm-8 fw-semibold
+            {% if days_left <= 7 %}text-danger{% elif days_left <= 14 %}text-warning{% endif %}">
+            {{ days_left }} dni
+          </dd>
+          {% endif %}
+          <dt class="col-sm-4 text-muted fw-normal">Aktywne zapisy</dt>
+          <dd class="col-sm-8">{{ bookings_count }}</dd>
+        </dl>
+
+        {% if days_left is not none and days_left <= 7 and days_left >= 0 %}
+        <div class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.84rem;border-radius:8px">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          Karnet wygasa za <strong>{{ days_left }} dni</strong>. Skontaktuj się z obsługą siłowni.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

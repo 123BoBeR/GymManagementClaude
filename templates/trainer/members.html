@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Moi Klienci — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-people-fill me-2" style="color:#e94560"></i>Moi Klienci</h1>
+  <p>Osoby zapisane na Twoje zajęcia</p>
+</div>
+
+{% if members_data %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Klient</th>
+          <th>Telefon</th>
+          <th>Karnet</th>
+          <th>Status karnetu</th>
+          <th>Zapisany na</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in members_data %}
+        {% set m = row.member %}
+        <tr>
+          <td class="ps-3">
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:34px;height:34px;border-radius:50%;background:#e94560;
+                          display:flex;align-items:center;justify-content:center;
+                          color:#fff;font-size:.8rem;font-weight:700;flex-shrink:0">
+                {{ m.first_name[0] }}{{ m.last_name[0] }}
+              </div>
+              <div>
+                <div class="fw-semibold">{{ m.first_name }} {{ m.last_name }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-muted">{{ m.phone or '—' }}</td>
+          <td>
+            {% if m.subscription_type == 'monthly' %}
+              <span class="badge badge-monthly">Miesięczny</span>
+            {% elif m.subscription_type == 'annual' %}
+              <span class="badge badge-annual">Roczny</span>
+            {% else %}
+              <span class="badge badge-day">Dzienny</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if m.subscription_end and m.subscription_end >= today %}
+              <span class="badge bg-success">Aktywny</span>
+            {% else %}
+              <span class="badge bg-danger">Wygasły</span>
+            {% endif %}
+          </td>
+          <td>
+            {% for cls_name in row.classes %}
+              <span class="badge me-1" style="background:#f1f5f9;color:#475569;font-weight:500">
+                {{ cls_name }}
+              </span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    Żaden klient nie jest jeszcze zapisany na Twoje zajęcia.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

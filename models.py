@@ -1,0 +1,80 @@
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
+db = SQLAlchemy()
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), nullable=False)  # admin | trainer | client
+
+    member = db.relationship('Member', backref='user', uselist=False, cascade='all, delete-orphan')
+    trainer = db.relationship('Trainer', backref='user', uselist=False, cascade='all, delete-orphan')
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+class Member(db.Model):
+    __tablename__ = 'members'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    first_name = db.Column(db.String(80), nullable=False)
+    last_name = db.Column(db.String(80), nullable=False)
+    phone = db.Column(db.String(20))
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    subscription_type = db.Column(db.String(30))   # monthly | annual | day_pass
+    subscription_end = db.Column(db.Date)
+
+    bookings = db.relationship('Booking', backref='member', cascade='all, delete-orphan')
+
+
+class Trainer(db.Model):
+    __tablename__ = 'trainers'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    first_name = db.Column(db.String(80), nullable=False)
+    last_name = db.Column(db.String(80), nullable=False)
+    specialization = db.Column(db.String(100))
+    hourly_rate = db.Column(db.Float)
+
+    classes = db.relationship('GymClass', backref='trainer')
+
+
+class GymClass(db.Model):
+    __tablename__ = 'gym_classes'
+    id = db.Column(db.Integer, primary_key=True)
+    trainer_id = db.Column(db.Integer, db.ForeignKey('trainers.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    max_capacity = db.Column(db.Integer, default=10)
+    schedule_day = db.Column(db.String(20))    # Poniedziałek…Niedziela
+    schedule_time = db.Column(db.String(10))   # HH:MM
+    duration_minutes = db.Column(db.Integer, default=60)
+
+    bookings = db.relationship('Booking', backref='gym_class', cascade='all, delete-orphan')
+
+
+class Booking(db.Model):
+    __tablename__ = 'bookings'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
+    booked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
+
+
+class Equipment(db.Model):
+    __tablename__ = 'equipment'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='working')  # working | maintenance | broken
+    purchase_date = db.Column(db.Date)

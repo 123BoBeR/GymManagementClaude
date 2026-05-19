@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}GymApp{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root { --sb: 240px; --bg-dark: #0f172a; --accent: #e94560; }
+    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+    /* sidebar */
+    .sidebar {
+      position: fixed; top: 0; left: 0;
+      width: var(--sb); height: 100vh;
+      background: var(--bg-dark);
+      display: flex; flex-direction: column;
+      z-index: 100; overflow-y: auto;
+    }
+    .sb-logo {
+      padding: 1.2rem 1.4rem;
+      font-size: 1.15rem; font-weight: 700; color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      letter-spacing: .3px;
+    }
+    .sb-logo span { color: var(--accent); }
+    .sb-user {
+      padding: .9rem 1.4rem;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .sb-user .name { color: #fff; font-size: .88rem; font-weight: 600; }
+    .sb-section {
+      padding: .7rem 1.4rem .2rem;
+      font-size: .68rem; text-transform: uppercase; letter-spacing: 1px;
+      color: rgba(255,255,255,.3); font-weight: 600;
+    }
+    .sidebar .nav-link {
+      color: rgba(255,255,255,.58);
+      padding: .6rem 1.4rem;
+      font-size: .865rem;
+      display: flex; align-items: center; gap: .55rem;
+      border-radius: 0; transition: all .18s;
+    }
+    .sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,.06); }
+    .sidebar .nav-link.active { color: #fff; background: var(--accent); }
+    .sidebar .nav-link i { font-size: .95rem; }
+    .sb-footer {
+      margin-top: auto; padding: 1rem 1.4rem;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+
+    /* layout */
+    .main { margin-left: var(--sb); min-height: 100vh; padding: 2rem 2.2rem; }
+
+    /* page header */
+    .ph { margin-bottom: 1.5rem; }
+    .ph h1 { font-size: 1.45rem; font-weight: 700; color: #1e293b; margin: 0; }
+    .ph p  { color: #64748b; font-size: .87rem; margin: .15rem 0 0; }
+
+    /* stat card */
+    .stat-card {
+      background: #fff; border-radius: 12px; padding: 1.2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .stat-card .ico {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+    }
+    .stat-card .val { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
+    .stat-card .lbl { color: #64748b; font-size: .78rem; }
+
+    /* card overrides */
+    .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .card-header {
+      background: #fff; border-bottom: 1px solid #f1f5f9;
+      border-radius: 12px 12px 0 0 !important; padding: .9rem 1.2rem;
+    }
+    .card-header h5 { margin: 0; font-weight: 600; font-size: .95rem; }
+
+    /* table */
+    table th { font-weight: 600; font-size: .77rem; text-transform: uppercase;
+               letter-spacing: .4px; color: #64748b; }
+    table td { font-size: .875rem; vertical-align: middle; }
+
+    /* sub badges */
+    .badge-monthly { background: #dbeafe; color: #1d4ed8; }
+    .badge-annual  { background: #dcfce7; color: #15803d; }
+    .badge-day     { background: #fef9c3; color: #92400e; }
+
+    /* eq status */
+    .eq-working     { background: #dcfce7; color: #15803d; }
+    .eq-maintenance { background: #fef3c7; color: #92400e; }
+    .eq-broken      { background: #fee2e2; color: #b91c1c; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sb-logo"><i class="bi bi-lightning-charge-fill" style="color:var(--accent)"></i> Gym<span>App</span></div>
+
+  <div class="sb-user">
+    <div class="name mb-1">{{ session.username }}</div>
+    {% if session.role == 'admin' %}
+      <span class="badge" style="background:var(--accent);font-size:.7rem">Administrator</span>
+    {% elif session.role == 'trainer' %}
+      <span class="badge bg-warning text-dark" style="font-size:.7rem">Trener</span>
+    {% else %}
+      <span class="badge bg-success" style="font-size:.7rem">Klient</span>
+    {% endif %}
+  </div>
+
+  <div class="sb-section">Menu</div>
+
+  <nav class="nav flex-column">
+    {% if session.role == 'admin' %}
+      <a href="/admin/" class="nav-link {% if request.path == '/admin/' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="/admin/members" class="nav-link {% if '/admin/members' in request.path %}active{% endif %}">
+        <i class="bi bi-people-fill"></i> Klienci
+      </a>
+      <a href="/admin/trainers" class="nav-link {% if '/admin/trainers' in request.path %}active{% endif %}">
+        <i class="bi bi-person-badge-fill"></i> Trenerzy
+      </a>
+      <a href="/admin/classes" class="nav-link {% if '/admin/classes' in request.path %}active{% endif %}">
+        <i class="bi bi-calendar3-week"></i> Zajęcia
+      </a>
+      <a href="/admin/equipment" class="nav-link {% if '/admin/equipment' in request.path %}active{% endif %}">
+        <i class="bi bi-tools"></i> Sprzęt
+      </a>
+    {% elif session.role == 'trainer' %}
+      <a href="/trainer/" class="nav-link {% if request.path == '/trainer/' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="/trainer/schedule" class="nav-link {% if '/trainer/schedule' in request.path %}active{% endif %}">
+        <i class="bi bi-calendar3-week"></i> Harmonogram
+      </a>
+      <a href="/trainer/members" class="nav-link {% if '/trainer/members' in request.path %}active{% endif %}">
+        <i class="bi bi-people-fill"></i> Moi Klienci
+      </a>
+    {% else %}
+      <a href="/client/" class="nav-link {% if request.path == '/client/' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a href="/client/classes" class="nav-link {% if '/client/classes' in request.path %}active{% endif %}">
+        <i class="bi bi-activity"></i> Zajęcia
+      </a>
+      <a href="/client/bookings" class="nav-link {% if '/client/bookings' in request.path %}active{% endif %}">
+        <i class="bi bi-bookmark-check-fill"></i> Rezerwacje
+      </a>
+      <a href="/client/profile" class="nav-link {% if '/client/profile' in request.path %}active{% endif %}">
+        <i class="bi bi-person-fill"></i> Profil
+      </a>
+    {% endif %}
+  </nav>
+
+  <div class="sb-footer">
+    <a href="/logout" class="btn btn-sm w-100"
+       style="background:rgba(255,255,255,.08);color:#fff;border:none">
+      <i class="bi bi-box-arrow-right"></i> Wyloguj
+    </a>
+  </div>
+</div>
+
+<div class="main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for cat, msg in messages %}
+        <div class="alert alert-{{ cat }} alert-dismissible fade show mb-3" role="alert">
+          {{ msg }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
