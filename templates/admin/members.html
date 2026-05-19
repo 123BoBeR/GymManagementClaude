@@ -13,6 +13,16 @@
   </a>
 </div>
 
+<div class="d-flex gap-2 mb-3">
+  <input id="search-name" type="text" class="form-control" placeholder="Szukaj po imieniu lub nazwisku..." style="max-width:320px">
+  <select id="filter-sub" class="form-select" style="max-width:180px">
+    <option value="">Wszystkie karnety</option>
+    <option value="monthly">Miesięczny</option>
+    <option value="annual">Roczny</option>
+    <option value="day_pass">Dzienny</option>
+  </select>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     {% if members %}
@@ -31,7 +41,7 @@
       </thead>
       <tbody>
         {% for m in members %}
-        <tr>
+        <tr data-name="{{ m.first_name | lower }} {{ m.last_name | lower }}" data-sub="{{ m.subscription_type }}">
           <td class="ps-3 text-muted small">{{ m.id }}</td>
           <td><strong>{{ m.first_name }} {{ m.last_name }}</strong></td>
           <td><code style="font-size:.82rem">{{ m.user.username }}</code></td>
@@ -71,9 +81,38 @@
         {% endfor %}
       </tbody>
     </table>
+    <tr id="no-results" style="display:none">
+      <td colspan="8" class="text-muted text-center py-4">Nie znaleziono członków.</td>
+    </tr>
     {% else %}
     <p class="text-muted text-center py-5 mb-0">Brak klientów. <a href="/admin/members/new">Dodaj pierwszego.</a></p>
     {% endif %}
   </div>
 </div>
+
+<script>
+  const searchInput = document.getElementById('search-name');
+  const subFilter = document.getElementById('filter-sub');
+  const noResults = document.getElementById('no-results');
+
+  function applyFilters() {
+    const query = searchInput.value.toLowerCase().trim();
+    const sub = subFilter.value;
+    const rows = document.querySelectorAll('tbody tr:not(#no-results)');
+    let visible = 0;
+
+    rows.forEach(row => {
+      const nameMatch = !query || row.dataset.name.includes(query);
+      const subMatch = !sub || row.dataset.sub === sub;
+      const show = nameMatch && subMatch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+
+    noResults.style.display = visible === 0 ? '' : 'none';
+  }
+
+  searchInput.addEventListener('input', applyFilters);
+  subFilter.addEventListener('change', applyFilters);
+</script>
 {% endblock %}
