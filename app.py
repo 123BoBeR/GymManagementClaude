@@ -4,7 +4,7 @@ from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment
 from functools import wraps
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 load_dotenv()
 
@@ -308,6 +308,31 @@ def client_book(id):
     if Booking.query.filter_by(member_id=member.id, class_id=id, status='confirmed').first():
         flash('Jesteś już zapisany na te zajęcia.', 'warning')
         return redirect(url_for('client_classes'))
+
+    # Sprawdź konflikt terminów z istniejącymi rezerwacjami
+    def to_minutes(t_str):
+        h, m = map(int, t_str.split(':'))
+        return h * 60 + m
+
+    new_start = to_minutes(gym_class.schedule_time)
+    new_end = new_start + gym_class.duration_minutes
+
+    existing_bookings = (Booking.query
+                         .filter_by(member_id=member.id, status='confirmed')
+                         .join(GymClass)
+                         .filter(GymClass.schedule_day == gym_class.schedule_day)
+                         .all())
+    for b in existing_bookings:
+        ex_start = to_minutes(b.gym_class.schedule_time)
+        ex_end = ex_start + b.gym_class.duration_minutes
+        if new_start < ex_end and ex_start < new_end:
+            flash(
+                f'Konflikt terminów: "{b.gym_class.name}" '
+                f'({b.gym_class.schedule_day}, {b.gym_class.schedule_time}) '
+                f'pokrywa się z wybranymi zajęciami.',
+                'danger'
+            )
+            return redirect(url_for('client_classes'))
 
     db.session.add(Booking(member_id=member.id, class_id=id, status='confirmed'))
     db.session.commit()
