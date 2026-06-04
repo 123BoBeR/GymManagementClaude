@@ -108,33 +108,32 @@ User ──< Member ──< Booking >── ClassSession >── GymClass >─�
 
 ---
 
+### Panel Admina (cd.)
+- **Karnet** - szybkie przedłużenie/zmiana z listy członków (modal + przyciski +1m/3m/1 rok)
+- **Reset hasła** - admin resetuje hasło dowolnego klienta z listy
+- **Eksport CSV** - lista członków z datami i statusem (BOM, kompatybilny z Excelem)
+- **Sprzęt** - pełny CRUD: dodawanie, edycja (modal), usuwanie
+- **Raporty** - wykres obłożenia tygodniowego (Chart.js) + ranking popularności zajęć
+
+### Panel Trenera (cd.)
+- **Edycja zajęć** - trener edytuje oczekujące propozycje; odrzucone można poprawić i wysłać ponownie
+- **Obecność** - lista sesji ±7/14 dni; per sesja oznaczanie Był/a / Nieobecny / —
+
+### Panel Klienta (cd.)
+- **Lista oczekujących** - gdy sesja pełna, klient dołącza do kolejki; auto-awans przy anulowaniu
+
+### Zmiana hasła
+- Każda rola zmienia hasło z sidebara (`/change-password`)
+
+### Testy
+- 16 testów pytest: autoryzacja, kontrola ról, rezerwacje, konflikty, waitlist + auto-awans
+
+---
+
 ## 🔮 Plany na przyszłość
 
-### Członkowie i subskrypcje
-- [ ] Flow przedłużania subskrypcji - admin może przedłużyć lub zmienić typ bez usuwania konta
-- [ ] Eksport listy członków do CSV
-
-### Trenerzy
-- [ ] Formularz edycji trenera (admin zmienia specjalizację, stawkę)
-- [ ] Widok harmonogramu w formacie kalendarza
-- [ ] Oznaczanie obecności - trener potwierdza kto faktycznie przyszedł
-
-### Zajęcia i rezerwacje
-- [ ] Lista oczekujących - gdy sesja jest pełna, klient wchodzi w kolejkę
-- [ ] Edycja zajęć - trener może zaktualizować propozycję przed zatwierdzeniem
 - [ ] Limit rezerwacji na tydzień
-
-### Sprzęt
-- [ ] Pełny CRUD sprzętu z panelu admina (teraz jest tylko podgląd)
-- [ ] Dziennik serwisowy - historia napraw dla każdego urządzenia
-- [ ] Alert na dashboardzie gdy sprzęt ma status `broken` lub `maintenance`
-
-### Raporty i analityka
-- [ ] Wykres obłożenia sesji w czasie
-- [ ] Szacowany przychód na podstawie aktywnych subskrypcji
-- [ ] Ranking najpopularniejszych zajęć
-
-### Technicznie
-- [ ] Zmiana hasła (wszystkie role) + reset hasła przez admina
-- [ ] Testy pytest (logika rezerwacji i auth)
-- [ ] Migracja z SQLite na PostgreSQL
+- [ ] Widok harmonogramu trenera w formacie kalendarza
+- [ ] Dziennik serwisowy sprzętu
+- [ ] Alert na dashboardzie admina gdy sprzęt zepsuty/w serwisie
+- [ ] Szacowany przychód z aktywnych subskrypcji
