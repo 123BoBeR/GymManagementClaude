@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Obecność — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-check-fill me-2" style="color:#e94560"></i>Lista obecności</h1>
+  <p>
+    {{ class_session.gym_class.name }} -
+    {{ class_session.session_date.strftime('%d.%m.%Y') }},
+    {{ class_session.gym_class.schedule_time }}
+  </p>
+</div>
+
+<div class="card" style="max-width:680px">
+  <div class="card-body p-0">
+    {% if bookings %}
+    <form action="/trainer/sessions/{{ class_session.id }}/attendance" method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Klient</th>
+            <th>Karnet</th>
+            <th class="text-center">Obecność</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+          <tr>
+            <td class="ps-3">
+              <div class="d-flex align-items-center gap-2">
+                <div style="width:32px;height:32px;border-radius:50%;background:#e94560;
+                            display:flex;align-items:center;justify-content:center;
+                            color:#fff;font-size:.78rem;font-weight:700;flex-shrink:0">
+                  {{ b.member.first_name[0] }}{{ b.member.last_name[0] }}
+                </div>
+                <span class="fw-semibold">{{ b.member.first_name }} {{ b.member.last_name }}</span>
+              </div>
+            </td>
+            <td>
+              {% if b.member.subscription_type == 'monthly' %}
+                <span class="badge badge-monthly">Miesięczny</span>
+              {% elif b.member.subscription_type == 'annual' %}
+                <span class="badge badge-annual">Roczny</span>
+              {% else %}
+                <span class="badge badge-day">Dzienny</span>
+              {% endif %}
+            </td>
+            <td class="text-center" style="width:180px">
+              <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="attended_{{ b.id }}"
+                       id="att_yes_{{ b.id }}" value="1"
+                       {% if b.attended == true %}checked{% endif %}>
+                <label class="btn btn-outline-success" for="att_yes_{{ b.id }}">
+                  <i class="bi bi-check-lg"></i> Był/a
+                </label>
+
+                <input type="radio" class="btn-check" name="attended_{{ b.id }}"
+                       id="att_no_{{ b.id }}" value="0"
+                       {% if b.attended == false %}checked{% endif %}>
+                <label class="btn btn-outline-danger" for="att_no_{{ b.id }}">
+                  <i class="bi bi-x-lg"></i> Nieobecny
+                </label>
+
+                <input type="radio" class="btn-check" name="attended_{{ b.id }}"
+                       id="att_none_{{ b.id }}" value=""
+                       {% if b.attended is none %}checked{% endif %}>
+                <label class="btn btn-outline-secondary" for="att_none_{{ b.id }}">
+                  —
+                </label>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="p-3 d-flex gap-2">
+        <button type="submit" class="btn"
+                style="background:#e94560;color:#fff;border-radius:8px;font-weight:600">
+          <i class="bi bi-check-lg me-1"></i> Zapisz obecność
+        </button>
+        <a href="/trainer/sessions" class="btn btn-outline-secondary" style="border-radius:8px">Wróć</a>
+      </div>
+    </form>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      Nikt nie jest zapisany na tę sesję.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

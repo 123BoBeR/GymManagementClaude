@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Sesje — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-check-fill me-2" style="color:#e94560"></i>Oznaczanie obecności</h1>
+  <p>Sesje z ostatnich 7 dni i nadchodzące 14 dni</p>
+</div>
+
+{% if sessions %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Data</th>
+          <th>Zajęcia</th>
+          <th>Godzina</th>
+          <th>Zapisanych</th>
+          <th>Obecnych</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        {% set bookings = s.bookings | selectattr('status','eq','confirmed') | list %}
+        {% set attended = bookings | selectattr('attended', 'eq', true) | list | length %}
+        <tr>
+          <td class="ps-3">
+            <span class="fw-semibold">{{ s.session_date.strftime('%d.%m.%Y') }}</span>
+            {% if s.session_date == today %}
+              <span class="badge bg-success ms-1" style="font-size:.7rem">Dziś</span>
+            {% elif s.session_date < today %}
+              <span class="badge bg-secondary ms-1" style="font-size:.7rem">Miniona</span>
+            {% else %}
+              <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem">Nadchodząca</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ s.gym_class.name }}</td>
+          <td class="text-muted">{{ s.gym_class.schedule_time }}</td>
+          <td class="text-muted">{{ bookings | length }}</td>
+          <td>
+            {% if bookings | selectattr('attended') | list | length > 0 %}
+              <span class="text-success fw-semibold">{{ attended }}</span>
+              <span class="text-muted"> / {{ bookings | length }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td class="pe-3">
+            <a href="/trainer/sessions/{{ s.id }}/attendance"
+               class="btn btn-sm {% if s.session_date <= today %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
+              <i class="bi bi-person-check me-1"></i>
+              {% if s.session_date <= today %}Oznacz{% else %}Podgląd{% endif %}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">
+    Brak sesji w najbliższych 14 dniach.
+  </div>
+</div>
+{% endif %}
+{% endblock %}

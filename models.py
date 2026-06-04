@@ -87,6 +87,7 @@ class Booking(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey('class_sessions.id'), nullable=False)
     booked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
+    attended = db.Column(db.Boolean, nullable=True)  # None=nieoznaczone, True=był, False=nieobecny
 
     @property
     def gym_class(self):

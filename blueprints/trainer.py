@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request, sessio
 from extensions import db
 from models import User, GymClass, ClassSession, Booking
 from blueprints.utils import role_required
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 bp = Blueprint('trainer', __name__, url_prefix='/trainer')
 
@@ -99,6 +99,62 @@ def trainer_propose_class():
         return redirect(url_for('trainer.trainer_schedule'))
 
     return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS)
+
+
+@bp.route('/sessions')
+@role_required('trainer')
+def trainer_sessions():
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+
+    # Sesje z ostatniego tygodnia + nadchodzące 14 dni
+    upcoming_sessions = (
+        ClassSession.query
+        .join(GymClass)
+        .filter(
+            GymClass.trainer_id == trainer.id,
+            GymClass.status == 'approved',
+            ClassSession.session_date >= week_ago,
+            ClassSession.session_date <= today + timedelta(days=14),
+            ClassSession.cancelled == False,
+        )
+        .order_by(ClassSession.session_date)
+        .all()
+    )
+    return render_template('trainer/sessions.html', trainer=trainer,
+                           sessions=upcoming_sessions, today=today)
+
+
+@bp.route('/sessions/<int:session_id>/attendance', methods=['GET', 'POST'])
+@role_required('trainer')
+def trainer_attendance(session_id):
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    class_session = ClassSession.query.get_or_404(session_id)
+
+    if class_session.gym_class.trainer_id != trainer.id:
+        flash('Brak dostępu do tej sesji.', 'danger')
+        return redirect(url_for('trainer.trainer_sessions'))
+
+    if request.method == 'POST':
+        bookings = Booking.query.filter_by(session_id=session_id, status='confirmed').all()
+        for b in bookings:
+            val = request.form.get(f'attended_{b.id}')
+            if val == '1':
+                b.attended = True
+            elif val == '0':
+                b.attended = False
+            else:
+                b.attended = None
+        db.session.commit()
+        flash('Obecność zapisana.', 'success')
+        return redirect(url_for('trainer.trainer_sessions'))
+
+    bookings = Booking.query.filter_by(session_id=session_id, status='confirmed').all()
+    return render_template('trainer/attendance.html', trainer=trainer,
+                           class_session=class_session, bookings=bookings)
 
 
 @bp.route('/classes/<int:id>/edit', methods=['GET', 'POST'])
