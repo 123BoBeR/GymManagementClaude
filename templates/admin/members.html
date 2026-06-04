@@ -66,6 +66,10 @@
             {% endif %}
           </td>
           <td class="pe-3">
+            <button class="btn btn-sm btn-outline-success me-1" title="Odnów karnet"
+                    data-bs-toggle="modal" data-bs-target="#renewModal{{ m.id }}">
+              <i class="bi bi-credit-card"></i>
+            </button>
             <a href="/admin/members/{{ m.id }}/edit"
                class="btn btn-sm btn-outline-secondary me-1">
               <i class="bi bi-pencil"></i>
@@ -91,7 +95,67 @@
   </div>
 </div>
 
+{% for m in members %}
+<div class="modal fade" id="renewModal{{ m.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-credit-card me-2" style="color:#22c55e"></i>Odnów karnet
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/members/{{ m.id }}/renew" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:.88rem">
+            Klient: <strong>{{ m.first_name }} {{ m.last_name }}</strong>
+            {% if m.subscription_end %}
+              - aktualnie ważny do <strong>{{ m.subscription_end.strftime('%d.%m.%Y') }}</strong>
+            {% endif %}
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Typ karnetu</label>
+            <select name="subscription_type" class="form-select">
+              <option value="monthly"  {% if m.subscription_type == 'monthly'  %}selected{% endif %}>Miesięczny</option>
+              <option value="annual"   {% if m.subscription_type == 'annual'   %}selected{% endif %}>Roczny</option>
+              <option value="day_pass" {% if m.subscription_type == 'day_pass' %}selected{% endif %}>Karnet dzienny</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nowa data wygaśnięcia</label>
+            <input type="date" name="subscription_end" id="renewDate{{ m.id }}" class="form-control" required
+                   value="{{ m.subscription_end.strftime('%Y-%m-%d') if m.subscription_end else '' }}">
+          </div>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="addMonths('renewDate{{ m.id }}', 1)">+1 miesiąc</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="addMonths('renewDate{{ m.id }}', 3)">+3 miesiące</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+                    onclick="addMonths('renewDate{{ m.id }}', 12)">+1 rok</button>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-success" style="font-weight:600">
+            <i class="bi bi-check-lg me-1"></i> Zapisz
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
 <script>
+  function addMonths(inputId, months) {
+    const input = document.getElementById(inputId);
+    const base = input.value ? new Date(input.value) : new Date();
+    base.setMonth(base.getMonth() + months);
+    input.value = base.toISOString().split('T')[0];
+  }
+
   const searchInput = document.getElementById('search-name');
   const subFilter = document.getElementById('filter-sub');
   const noResults = document.getElementById('no-results');

@@ -83,6 +83,19 @@ def admin_member_edit(id):
     return render_template('admin/member_form.html', member=member)
 
 
+@bp.route('/members/<int:id>/renew', methods=['POST'])
+@role_required('admin')
+def admin_member_renew(id):
+    member = Member.query.get_or_404(id)
+    member.subscription_type = request.form.get('subscription_type', member.subscription_type)
+    sub_end_str = request.form.get('subscription_end', '')
+    if sub_end_str:
+        member.subscription_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date()
+    db.session.commit()
+    flash(f'Karnet dla {member.first_name} {member.last_name} zaktualizowany do {member.subscription_end.strftime("%d.%m.%Y")}.', 'success')
+    return redirect(url_for('admin.admin_members'))
+
+
 @bp.route('/members/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_member_delete(id):
