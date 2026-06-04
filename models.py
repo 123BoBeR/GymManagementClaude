@@ -95,6 +95,17 @@ class Booking(db.Model):
         return self.session.gym_class
 
 
+class WaitlistEntry(db.Model):
+    __tablename__ = 'waitlist'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('class_sessions.id'), nullable=False)
+    added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    member = db.relationship('Member', backref='waitlist_entries')
+    session = db.relationship('ClassSession', backref='waitlist')
+
+
 class Equipment(db.Model):
     __tablename__ = 'equipment'
     id = db.Column(db.Integer, primary_key=True)

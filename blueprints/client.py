@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from extensions import db
-from models import User, GymClass, ClassSession, Booking
+from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
 from datetime import date
 
@@ -41,6 +41,10 @@ def client_classes():
     # Dla każdych zajęć wyznacz najbliższe nadchodzące sesje (max 3)
     booked_session_ids = {b.session_id for b in Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
 
+    waitlist_session_ids = {
+        w.session_id for w in WaitlistEntry.query.filter_by(member_id=member.id).all()
+    }
+
     classes_data = []
     for c in classes:
         upcoming = [s for s in c.sessions if s.session_date >= today and not s.cancelled][:3]
@@ -48,15 +52,21 @@ def client_classes():
             s.id: Booking.query.filter_by(session_id=s.id, status='confirmed').count()
             for s in upcoming
         }
+        waitlist_counts = {
+            s.id: WaitlistEntry.query.filter_by(session_id=s.id).count()
+            for s in upcoming
+        }
         classes_data.append({
             'class': c,
             'upcoming': upcoming,
             'booking_counts': booking_counts,
+            'waitlist_counts': waitlist_counts,
         })
 
     return render_template('client/classes.html',
                            classes_data=classes_data,
-                           booked_session_ids=booked_session_ids)
+                           booked_session_ids=booked_session_ids,
+                           waitlist_session_ids=waitlist_session_ids)
 
 
 @bp.route('/sessions/<int:session_id>/book', methods=['POST'])
@@ -112,9 +122,29 @@ def client_book(session_id):
             return redirect(url_for('client.client_classes'))
 
     db.session.add(Booking(member_id=member.id, session_id=session_id, status='confirmed'))
+    # Usuń z listy oczekujących jeśli był
+    WaitlistEntry.query.filter_by(member_id=member.id, session_id=session_id).delete()
     db.session.commit()
     flash(f'Zapisano na: {gym_class.name} ({class_session.session_date.strftime("%d.%m.%Y")})!', 'success')
     return redirect(url_for('client.client_bookings'))
+
+
+@bp.route('/sessions/<int:session_id>/waitlist', methods=['POST'])
+@role_required('client')
+def client_waitlist(session_id):
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    class_session = ClassSession.query.get_or_404(session_id)
+
+    if WaitlistEntry.query.filter_by(member_id=member.id, session_id=session_id).first():
+        flash('Już jesteś na liście oczekujących.', 'warning')
+        return redirect(url_for('client.client_classes'))
+
+    db.session.add(WaitlistEntry(member_id=member.id, session_id=session_id))
+    db.session.commit()
+    pos = WaitlistEntry.query.filter_by(session_id=session_id).count()
+    flash(f'Dodano na listę oczekujących — pozycja {pos}.', 'info')
+    return redirect(url_for('client.client_classes'))
 
 
 @bp.route('/bookings')
@@ -135,8 +165,25 @@ def client_cancel(id):
         flash('Brak dostępu.', 'danger')
         return redirect(url_for('client.client_bookings'))
     booking.status = 'cancelled'
+    db.session.flush()
+
+    # Auto-awans pierwszej osoby z listy oczekujących
+    next_in_line = (WaitlistEntry.query
+                    .filter_by(session_id=booking.session_id)
+                    .order_by(WaitlistEntry.added_at)
+                    .first())
+    if next_in_line:
+        db.session.add(Booking(
+            member_id=next_in_line.member_id,
+            session_id=booking.session_id,
+            status='confirmed',
+        ))
+        db.session.delete(next_in_line)
+        flash('Rezerwacja anulowana. Miejsce przekazano pierwszej osobie z listy oczekujących.', 'success')
+    else:
+        flash('Rezerwacja anulowana.', 'success')
+
     db.session.commit()
-    flash('Rezerwacja anulowana.', 'success')
     return redirect(url_for('client.client_bookings'))
 
 

@@ -47,6 +47,8 @@
           {% set cnt = item.booking_counts[s.id] %}
           {% set full = cnt >= c.max_capacity %}
           {% set booked = s.id in booked_session_ids %}
+          {% set on_waitlist = s.id in waitlist_session_ids %}
+          {% set wl_count = item.waitlist_counts[s.id] %}
           <div class="d-flex align-items-center justify-content-between py-2
                        border-top" style="font-size:.85rem">
             <div>
@@ -55,11 +57,24 @@
               <span class="ms-2" style="font-size:.78rem;color:#94a3b8">
                 {{ cnt }}/{{ c.max_capacity }} miejsc
               </span>
+              {% if full and wl_count > 0 %}
+                <span class="ms-1" style="font-size:.75rem;color:#d97706">
+                  {{ wl_count }} oczekuje
+                </span>
+              {% endif %}
             </div>
             {% if booked %}
               <span class="badge bg-success"><i class="bi bi-check-lg"></i> Zapisany</span>
+            {% elif on_waitlist %}
+              <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Na liście</span>
             {% elif full %}
-              <span class="badge bg-danger">Pełne</span>
+              <form action="/client/sessions/{{ s.id }}/waitlist" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning"
+                        style="border-radius:6px;font-size:.78rem;padding:.25rem .65rem">
+                  <i class="bi bi-clock me-1"></i>Lista oczekujących
+                </button>
+              </form>
             {% else %}
               <form action="/client/sessions/{{ s.id }}/book" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
