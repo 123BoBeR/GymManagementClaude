@@ -67,7 +67,7 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 - Zmiana hasła dostępna z sidebara dla każdej roli
 
 ### Panel Admina
-- **Dashboard** - statystyki na żywo + badge z liczbą zajęć do zatwierdzenia + feed ostatnich rezerwacji
+- **Dashboard** - statystyki na żywo + badge z liczbą zajęć do zatwierdzenia + alert gdy sprzęt broken/maintenance + feed ostatnich rezerwacji
 - **Członkowie** - pełny CRUD z wyszukiwarką i filtrem po karnecie; szybkie odnowienie karnetu (modal +1m/+3m/+1 rok); reset hasła; eksport do CSV
 - **Trenerzy** - lista z edycją danych (modal)
 - **Zajęcia** - workflow zatwierdzania: sekcja "Do zatwierdzenia" z przyciskami Zatwierdź / Odrzuć (modal z notatką); lista zatwierdzonych i odrzuconych
