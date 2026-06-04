@@ -105,7 +105,12 @@
             co {{ c.frequency_weeks }} {% if c.frequency_weeks == 1 %}tydzień{% else %}tygodnie{% endif %}
           </td>
           <td class="text-muted">{{ c.start_date.strftime('%d.%m.%Y') if c.start_date else '—' }}</td>
-          <td><span class="badge bg-warning text-dark">Oczekuje</span></td>
+          <td>
+            <span class="badge bg-warning text-dark me-1">Oczekuje</span>
+            <a href="/trainer/classes/{{ c.id }}/edit" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:.15rem .45rem">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -141,6 +146,9 @@
             {% else %}
               <span class="text-muted">Brak notatki</span>
             {% endif %}
+            <a href="/trainer/classes/{{ c.id }}/edit" class="btn btn-sm btn-outline-danger ms-2" style="font-size:.75rem;padding:.15rem .45rem">
+              <i class="bi bi-arrow-counterclockwise"></i> Popraw i wyślij ponownie
+            </a>
           </td>
         </tr>
         {% endfor %}

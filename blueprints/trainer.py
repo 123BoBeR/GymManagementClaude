@@ -101,6 +101,45 @@ def trainer_propose_class():
     return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS)
 
 
+@bp.route('/classes/<int:id>/edit', methods=['GET', 'POST'])
+@role_required('trainer')
+def trainer_class_edit(id):
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    gym_class = GymClass.query.get_or_404(id)
+
+    if gym_class.trainer_id != trainer.id:
+        flash('Brak dostępu do tych zajęć.', 'danger')
+        return redirect(url_for('trainer.trainer_schedule'))
+
+    if gym_class.status == 'approved':
+        flash('Nie można edytować zatwierdzonych zajęć - skontaktuj się z administratorem.', 'warning')
+        return redirect(url_for('trainer.trainer_schedule'))
+
+    if request.method == 'POST':
+        gym_class.name = request.form.get('name', gym_class.name).strip()
+        gym_class.description = request.form.get('description', gym_class.description).strip()
+        gym_class.max_capacity = int(request.form.get('max_capacity', gym_class.max_capacity))
+        gym_class.schedule_day = request.form.get('schedule_day', gym_class.schedule_day)
+        gym_class.schedule_time = request.form.get('schedule_time', gym_class.schedule_time)
+        gym_class.duration_minutes = int(request.form.get('duration_minutes', gym_class.duration_minutes))
+        gym_class.frequency_weeks = int(request.form.get('frequency_weeks', gym_class.frequency_weeks))
+        start_date_str = request.form.get('start_date', '')
+        if start_date_str:
+            gym_class.start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        # Cofnij odrzucenie jeśli trener poprawił i ponownie wysyła
+        if gym_class.status == 'rejected':
+            gym_class.status = 'pending'
+            gym_class.rejection_note = None
+            flash('Zajęcia zaktualizowane i ponownie wysłane do zatwierdzenia.', 'success')
+        else:
+            flash('Propozycja zaktualizowana.', 'success')
+        db.session.commit()
+        return redirect(url_for('trainer.trainer_schedule'))
+
+    return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS, edit=gym_class)
+
+
 @bp.route('/members')
 @role_required('trainer')
 def trainer_members():

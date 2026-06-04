@@ -1,11 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Zaproponuj zajęcia — GymApp{% endblock %}
+{% block title %}{{ 'Edytuj propozycję' if edit else 'Zaproponuj zajęcia' }} — GymApp{% endblock %}
 
 {% block content %}
 <div class="ph">
-  <h1><i class="bi bi-plus-circle-fill me-2" style="color:#e94560"></i>Zaproponuj zajęcia</h1>
-  <p>Wypełnij formularz - propozycja trafi do administratora do zatwierdzenia</p>
+  <h1><i class="bi bi-{{ 'pencil-fill' if edit else 'plus-circle-fill' }} me-2" style="color:#e94560"></i>
+    {{ 'Edytuj propozycję' if edit else 'Zaproponuj zajęcia' }}
+  </h1>
+  <p>
+    {% if edit and edit.status == 'rejected' %}
+      Popraw odrzuconą propozycję i wyślij ponownie do zatwierdzenia
+    {% elif edit %}
+      Zmień szczegóły oczekującej propozycji
+    {% else %}
+      Wypełnij formularz - propozycja trafi do administratora do zatwierdzenia
+    {% endif %}
+  </p>
 </div>
+
+{% if edit and edit.rejection_note %}
+<div class="alert alert-danger mb-4" style="border-radius:10px;font-size:.88rem">
+  <i class="bi bi-x-circle-fill me-2"></i>
+  <strong>Powód odrzucenia:</strong> {{ edit.rejection_note }}
+</div>
+{% endif %}
 
 <div class="card" style="max-width:640px">
   <div class="card-body p-4">
@@ -14,13 +31,15 @@
 
       <div class="mb-3">
         <label class="form-label fw-semibold">Nazwa zajęć</label>
-        <input type="text" name="name" class="form-control" required placeholder="np. Yoga dla zaawansowanych">
+        <input type="text" name="name" class="form-control" required
+               placeholder="np. Yoga dla zaawansowanych"
+               value="{{ edit.name if edit else '' }}">
       </div>
 
       <div class="mb-3">
         <label class="form-label fw-semibold">Opis</label>
         <textarea name="description" class="form-control" rows="2"
-                  placeholder="Krótki opis dla klientów..."></textarea>
+                  placeholder="Krótki opis dla klientów...">{{ edit.description if edit else '' }}</textarea>
       </div>
 
       <div class="row g-3 mb-3">
@@ -28,24 +47,27 @@
           <label class="form-label fw-semibold">Dzień tygodnia</label>
           <select name="schedule_day" class="form-select" required>
             {% for d in days %}
-              <option value="{{ d }}">{{ d }}</option>
+              <option value="{{ d }}" {% if edit and edit.schedule_day == d %}selected{% endif %}>{{ d }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="col">
           <label class="form-label fw-semibold">Godzina</label>
-          <input type="time" name="schedule_time" class="form-control" required value="09:00">
+          <input type="time" name="schedule_time" class="form-control" required
+                 value="{{ edit.schedule_time if edit else '09:00' }}">
         </div>
       </div>
 
       <div class="row g-3 mb-3">
         <div class="col">
           <label class="form-label fw-semibold">Czas trwania (min)</label>
-          <input type="number" name="duration_minutes" class="form-control" value="60" min="15" max="180">
+          <input type="number" name="duration_minutes" class="form-control"
+                 value="{{ edit.duration_minutes if edit else 60 }}" min="15" max="180">
         </div>
         <div class="col">
           <label class="form-label fw-semibold">Maks. miejsc</label>
-          <input type="number" name="max_capacity" class="form-control" value="15" min="1" max="100">
+          <input type="number" name="max_capacity" class="form-control"
+                 value="{{ edit.max_capacity if edit else 15 }}" min="1" max="100">
         </div>
       </div>
 
@@ -53,27 +75,32 @@
         <div class="col">
           <label class="form-label fw-semibold">Częstotliwość</label>
           <select name="frequency_weeks" class="form-select">
-            <option value="1">Co tydzień</option>
-            <option value="2">Co 2 tygodnie</option>
-            <option value="3">Co 3 tygodnie</option>
-            <option value="4">Co 4 tygodnie (miesięcznie)</option>
+            {% for val, label in [(1,'Co tydzień'),(2,'Co 2 tygodnie'),(3,'Co 3 tygodnie'),(4,'Co 4 tygodnie (miesięcznie)')] %}
+              <option value="{{ val }}" {% if edit and edit.frequency_weeks == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
           </select>
         </div>
         <div class="col">
           <label class="form-label fw-semibold">Data pierwszej sesji</label>
-          <input type="date" name="start_date" class="form-control" required>
+          <input type="date" name="start_date" class="form-control" required
+                 value="{{ edit.start_date.strftime('%Y-%m-%d') if edit and edit.start_date else '' }}">
         </div>
       </div>
 
       <div class="alert alert-info py-2 mb-4" style="font-size:.83rem;border-radius:8px">
         <i class="bi bi-info-circle me-1"></i>
-        Po wysłaniu propozycja trafi do administratora. Sesje zostaną wygenerowane dopiero po zatwierdzeniu.
+        {% if edit and edit.status == 'rejected' %}
+          Po wysłaniu propozycja wróci do kolejki oczekujących.
+        {% else %}
+          Po wysłaniu propozycja trafi do administratora. Sesje zostaną wygenerowane po zatwierdzeniu.
+        {% endif %}
       </div>
 
       <div class="d-flex gap-2">
         <button type="submit" class="btn"
                 style="background:#e94560;color:#fff;border-radius:8px;font-weight:600">
-          <i class="bi bi-send me-1"></i> Wyślij propozycję
+          <i class="bi bi-{{ 'check-lg' if edit else 'send' }} me-1"></i>
+          {{ 'Zapisz zmiany' if edit else 'Wyślij propozycję' }}
         </button>
         <a href="/trainer/schedule" class="btn btn-outline-secondary" style="border-radius:8px">Anuluj</a>
       </div>
