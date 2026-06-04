@@ -1,5 +1,8 @@
-from app import app
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment
+from app import create_app
+from extensions import db
+from models import User, Member, Trainer, GymClass, Booking, Equipment
+
+app = create_app()
 from datetime import date, datetime
 
 
