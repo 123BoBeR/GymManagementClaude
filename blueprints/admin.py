@@ -209,6 +209,9 @@ def admin_classes():
 @role_required('admin')
 def admin_class_approve(id):
     gym_class = GymClass.query.get_or_404(id)
+    if gym_class.status == 'approved':
+        flash(f'Zajęcia "{gym_class.name}" są już zatwierdzone.', 'warning')
+        return redirect(url_for('admin.admin_classes'))
     gym_class.status = 'approved'
     gym_class.rejection_note = None
     sessions = generate_sessions(gym_class, weeks=12)
