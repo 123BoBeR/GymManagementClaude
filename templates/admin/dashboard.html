@@ -7,6 +7,26 @@
   <p>Przegląd systemu zarządzania siłownią</p>
 </div>
 
+{% if equipment_issues %}
+<div class="alert alert-warning d-flex align-items-start gap-3 mb-4"
+     style="border-radius:10px;border-left:4px solid #d97706">
+  <i class="bi bi-tools fs-5 mt-1" style="color:#d97706;flex-shrink:0"></i>
+  <div class="flex-grow-1">
+    <strong>Sprzęt wymaga uwagi</strong>
+    <div class="mt-1 d-flex flex-wrap gap-2">
+      {% for e in equipment_issues %}
+        <span class="badge {% if e.status == 'broken' %}eq-broken{% else %}eq-maintenance{% endif %}">
+          {{ e.name }} - {{ 'Uszkodzony' if e.status == 'broken' else 'Serwis' }}
+        </span>
+      {% endfor %}
+    </div>
+  </div>
+  <a href="/admin/equipment" class="btn btn-sm btn-warning flex-shrink-0">
+    Przejdź do sprzętu
+  </a>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
   <div class="col-sm-6 col-xl-3">
     <div class="stat-card">

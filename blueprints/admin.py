@@ -24,7 +24,12 @@ def admin_dashboard():
         'pending': GymClass.query.filter_by(status='pending').count(),
     }
     recent_bookings = Booking.query.order_by(Booking.booked_at.desc()).limit(8).all()
-    return render_template('admin/dashboard.html', stats=stats, recent_bookings=recent_bookings)
+    equipment_issues = Equipment.query.filter(
+        Equipment.status.in_(['broken', 'maintenance'])
+    ).all()
+    return render_template('admin/dashboard.html', stats=stats,
+                           recent_bookings=recent_bookings,
+                           equipment_issues=equipment_issues)
 
 
 # ── Członkowie ────────────────────────────────────────────────────────────────
