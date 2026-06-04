@@ -66,6 +66,10 @@
             {% endif %}
           </td>
           <td class="pe-3">
+            <button class="btn btn-sm btn-outline-warning me-1" title="Resetuj hasło"
+                    data-bs-toggle="modal" data-bs-target="#resetPwModal{{ m.id }}">
+              <i class="bi bi-key"></i>
+            </button>
             <button class="btn btn-sm btn-outline-success me-1" title="Odnów karnet"
                     data-bs-toggle="modal" data-bs-target="#renewModal{{ m.id }}">
               <i class="bi bi-credit-card"></i>
@@ -96,6 +100,39 @@
 </div>
 
 {% for m in members %}
+<!-- Modal reset hasła -->
+<div class="modal fade" id="resetPwModal{{ m.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-key me-2" style="color:#d97706"></i>Reset hasła
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/members/{{ m.id }}/reset-password" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:.88rem">
+            Ustawiasz nowe hasło dla: <strong>{{ m.first_name }} {{ m.last_name }}</strong>
+          </p>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Nowe hasło</label>
+            <input type="text" name="new_password" class="form-control" required
+                   placeholder="min. 6 znaków">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-warning" style="font-weight:600">
+            <i class="bi bi-key me-1"></i> Resetuj hasło
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="renewModal{{ m.id }}" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content" style="border-radius:12px;border:none">

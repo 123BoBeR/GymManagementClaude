@@ -34,6 +34,29 @@ def login():
     return render_template('login.html')
 
 
+@bp.route('/change-password', methods=['GET', 'POST'])
+def change_password():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    user = db.session.get(User, session['user_id'])
+    if request.method == 'POST':
+        current = request.form.get('current_password', '')
+        new = request.form.get('new_password', '')
+        confirm = request.form.get('confirm_password', '')
+        if not user.check_password(current):
+            flash('Aktualne hasło jest nieprawidłowe.', 'danger')
+        elif len(new) < 6:
+            flash('Nowe hasło musi mieć co najmniej 6 znaków.', 'danger')
+        elif new != confirm:
+            flash('Hasła nie są identyczne.', 'danger')
+        else:
+            user.set_password(new)
+            db.session.commit()
+            flash('Hasło zmienione pomyślnie.', 'success')
+            return redirect(url_for('auth.index'))
+    return render_template('change_password.html')
+
+
 @bp.route('/logout')
 def logout():
     session.clear()

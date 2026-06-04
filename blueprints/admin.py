@@ -84,6 +84,20 @@ def admin_member_edit(id):
     return render_template('admin/member_form.html', member=member)
 
 
+@bp.route('/members/<int:id>/reset-password', methods=['POST'])
+@role_required('admin')
+def admin_member_reset_password(id):
+    member = Member.query.get_or_404(id)
+    new_password = request.form.get('new_password', '').strip()
+    if len(new_password) < 6:
+        flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
+        return redirect(url_for('admin.admin_members'))
+    member.user.set_password(new_password)
+    db.session.commit()
+    flash(f'Hasło dla {member.first_name} {member.last_name} zostało zresetowane.', 'success')
+    return redirect(url_for('admin.admin_members'))
+
+
 @bp.route('/members/<int:id>/renew', methods=['POST'])
 @role_required('admin')
 def admin_member_renew(id):
