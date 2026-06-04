@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+import csv
+import io
+from flask import Blueprint, render_template, redirect, url_for, request, flash, Response
 from extensions import db
 from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
 from blueprints.utils import role_required
@@ -26,6 +28,37 @@ def admin_dashboard():
 
 
 # ── Członkowie ────────────────────────────────────────────────────────────────
+
+@bp.route('/members/export')
+@role_required('admin')
+def admin_members_export():
+    members = Member.query.order_by(Member.last_name).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Imię', 'Nazwisko', 'Login', 'Telefon',
+                     'Karnet', 'Ważny do', 'Status', 'Data dołączenia'])
+    sub_labels = {'monthly': 'Miesięczny', 'annual': 'Roczny', 'day_pass': 'Dzienny'}
+    today = date.today()
+    for m in members:
+        status = 'Aktywny' if m.subscription_end and m.subscription_end >= today else 'Wygasły'
+        writer.writerow([
+            m.id,
+            m.first_name,
+            m.last_name,
+            m.user.username,
+            m.phone or '',
+            sub_labels.get(m.subscription_type, m.subscription_type),
+            m.subscription_end.strftime('%d.%m.%Y') if m.subscription_end else '',
+            status,
+            m.joined_at.strftime('%d.%m.%Y') if m.joined_at else '',
+        ])
+    output.seek(0)
+    return Response(
+        output.getvalue().encode('utf-8-sig'),  # utf-8-sig = BOM dla Excela
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=czlonkowie_{today}.csv'},
+    )
+
 
 @bp.route('/members')
 @role_required('admin')
