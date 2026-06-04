@@ -115,6 +115,24 @@ def admin_trainers():
     return render_template('admin/trainers.html', trainers=trainers)
 
 
+@bp.route('/trainers/<int:id>/edit', methods=['POST'])
+@role_required('admin')
+def admin_trainer_edit(id):
+    trainer = Trainer.query.get_or_404(id)
+    trainer.first_name = request.form.get('first_name', trainer.first_name).strip()
+    trainer.last_name = request.form.get('last_name', trainer.last_name).strip()
+    trainer.specialization = request.form.get('specialization', trainer.specialization).strip()
+    rate_str = request.form.get('hourly_rate', '').strip()
+    if rate_str:
+        try:
+            trainer.hourly_rate = float(rate_str)
+        except ValueError:
+            pass
+    db.session.commit()
+    flash(f'Dane trenera {trainer.first_name} {trainer.last_name} zaktualizowane.', 'success')
+    return redirect(url_for('admin.admin_trainers'))
+
+
 # ── Zajęcia ───────────────────────────────────────────────────────────────────
 
 @bp.route('/classes')
