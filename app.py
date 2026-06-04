@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash
+from flask_wtf.csrf import CSRFProtect
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment
 from functools import wraps
 from datetime import datetime, date
@@ -9,6 +10,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gym.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
+csrf = CSRFProtect(app)
 
 DAY_ORDER = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
 

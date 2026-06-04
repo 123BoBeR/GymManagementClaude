@@ -59,6 +59,7 @@
           <td class="pe-3">
             <form action="/admin/classes/{{ c.id }}/delete" method="POST" class="d-inline"
                   onsubmit="return confirm('Usunąć zajęcia {{ c.name }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-trash"></i>
               </button>
@@ -83,6 +84,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form method="POST" action="/admin/classes/new">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="modal-body">
           <div class="mb-3">
             <label class="form-label fw-semibold">Nazwa zajęć</label>

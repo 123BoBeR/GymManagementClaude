@@ -52,6 +52,7 @@
     {% endwith %}
 
     <form method="POST" action="/login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="mb-3">
         <label class="form-label fw-semibold" style="font-size:.88rem">Nazwa użytkownika</label>
         <input type="text" name="username" class="form-control" placeholder="login" required autofocus>

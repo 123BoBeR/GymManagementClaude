@@ -49,6 +49,7 @@
             {% if b.status == 'confirmed' %}
             <form action="/client/bookings/{{ b.id }}/cancel" method="POST" class="d-inline"
                   onsubmit="return confirm('Anulować rezerwację na {{ b.gym_class.name }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-sm btn-outline-danger">
                 <i class="bi bi-x-lg"></i> Anuluj
               </button>
