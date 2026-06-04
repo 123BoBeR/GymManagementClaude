@@ -3,7 +3,8 @@ from extensions import db
 from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+from collections import defaultdict
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -190,6 +191,58 @@ def admin_class_delete(id):
     db.session.commit()
     flash('Zajęcia usunięte.', 'success')
     return redirect(url_for('admin.admin_classes'))
+
+
+# ── Raporty ──────────────────────────────────────────────────────────────────
+
+@bp.route('/reports')
+@role_required('admin')
+def admin_reports():
+    today = date.today()
+    # Ostatnie 8 tygodni
+    weeks = 8
+    week_starts = [today - timedelta(weeks=i) for i in range(weeks - 1, -1, -1)]
+
+    # Obłożenie tygodniowe - liczba potwierdzonych rezerwacji per tydzień
+    occupancy_labels = [f"{w.strftime('%d.%m')}" for w in week_starts]
+    occupancy_data = []
+    for w in week_starts:
+        week_end = w + timedelta(days=6)
+        count = (Booking.query
+                 .join(ClassSession)
+                 .filter(
+                     ClassSession.session_date >= w,
+                     ClassSession.session_date <= week_end,
+                     Booking.status == 'confirmed',
+                 ).count())
+        occupancy_data.append(count)
+
+    # Ranking zajęć - łączna liczba potwierdzeń
+    ranking = []
+    for c in GymClass.query.filter_by(status='approved').all():
+        total = (Booking.query
+                 .join(ClassSession)
+                 .filter(ClassSession.class_id == c.id, Booking.status == 'confirmed')
+                 .count())
+        capacity = sum(1 for s in c.sessions) * c.max_capacity or 1
+        booked = sum(
+            Booking.query.filter_by(session_id=s.id, status='confirmed').count()
+            for s in c.sessions
+        )
+        fill_pct = round(booked / capacity * 100) if capacity else 0
+        ranking.append({
+            'name': c.name,
+            'trainer': f"{c.trainer.first_name} {c.trainer.last_name}",
+            'total_bookings': total,
+            'sessions_count': len(c.sessions),
+            'fill_pct': fill_pct,
+        })
+    ranking.sort(key=lambda x: x['total_bookings'], reverse=True)
+
+    return render_template('admin/reports.html',
+                           occupancy_labels=occupancy_labels,
+                           occupancy_data=occupancy_data,
+                           ranking=ranking)
 
 
 # ── Sprzęt ────────────────────────────────────────────────────────────────────

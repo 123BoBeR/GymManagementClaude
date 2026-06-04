@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Raporty — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-bar-chart-fill me-2" style="color:#e94560"></i>Raporty i analityka</h1>
+  <p>Obłożenie sesji i ranking zajęć z ostatnich 8 tygodni</p>
+</div>
+
+<!-- Wykres obłożenia -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5><i class="bi bi-graph-up me-2" style="color:#6366f1"></i>Rezerwacje tygodniowo</h5>
+  </div>
+  <div class="card-body">
+    <canvas id="occupancyChart" height="90"></canvas>
+  </div>
+</div>
+
+<!-- Ranking zajęć -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-trophy-fill me-2" style="color:#f59e0b"></i>Ranking popularności zajęć</h5>
+  </div>
+  <div class="card-body p-0">
+    {% if ranking %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:36px">#</th>
+          <th>Zajęcia</th>
+          <th>Trener</th>
+          <th>Sesji</th>
+          <th>Rezerwacji</th>
+          <th>Avg. wypełnienie</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i, r in ranking | enumerate %}
+        <tr>
+          <td class="ps-3">
+            {% if i == 0 %}
+              <i class="bi bi-trophy-fill" style="color:#f59e0b"></i>
+            {% elif i == 1 %}
+              <i class="bi bi-trophy-fill" style="color:#94a3b8"></i>
+            {% elif i == 2 %}
+              <i class="bi bi-trophy-fill" style="color:#b45309"></i>
+            {% else %}
+              <span class="text-muted">{{ i + 1 }}</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ r.name }}</td>
+          <td class="text-muted">{{ r.trainer }}</td>
+          <td class="text-muted">{{ r.sessions_count }}</td>
+          <td class="fw-semibold">{{ r.total_bookings }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px;max-width:100px">
+                <div class="progress-bar
+                  {% if r.fill_pct >= 80 %}bg-danger
+                  {% elif r.fill_pct >= 50 %}bg-warning
+                  {% else %}bg-success{% endif %}"
+                  style="width:{{ r.fill_pct }}%">
+                </div>
+              </div>
+              <span style="font-size:.8rem;color:#64748b">{{ r.fill_pct }}%</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-4 mb-0">Brak danych.</p>
+    {% endif %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const ctx = document.getElementById('occupancyChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ occupancy_labels | tojson }},
+      datasets: [{
+        label: 'Rezerwacje',
+        data: {{ occupancy_data | tojson }},
+        backgroundColor: 'rgba(233,69,96,.75)',
+        borderColor: '#e94560',
+        borderWidth: 1,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          grid: { color: 'rgba(0,0,0,.05)' },
+        },
+        x: { grid: { display: false } },
+      }
+    }
+  });
+</script>
+{% endblock %}
