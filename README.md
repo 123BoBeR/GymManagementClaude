@@ -6,12 +6,14 @@ Aplikacja webowa do zarządzania siłownią - członkowie, trenerzy, zajęcia gr
 
 ## 🛠️ Stack
 
-| Warstwa  | Technologia                       |
-|----------|-----------------------------------|
-| Backend  | Python 3.12, Flask 3.0            |
-| Baza     | SQLite via Flask-SQLAlchemy 3.1   |
-| Auth     | Sesje, hasła hashowane Werkzeugiem |
-| Frontend | Jinja2 + Bootstrap 5              |
+| Warstwa  | Technologia                              |
+|----------|------------------------------------------|
+| Backend  | Python 3.12, Flask 3.0, blueprinty       |
+| Baza     | SQLite via Flask-SQLAlchemy 3.1          |
+| Auth     | Sesje, hasła hashowane Werkzeugiem       |
+| Bezpiec. | CSRF via Flask-WTF                       |
+| Config   | Zmienne środowiskowe via python-dotenv   |
+| Frontend | Jinja2 + Bootstrap 5                     |
 
 ---
 
@@ -20,6 +22,9 @@ Aplikacja webowa do zarządzania siłownią - członkowie, trenerzy, zajęcia gr
 ```bash
 # zainstaluj zależności
 pip install -r requirements.txt
+
+# skopiuj plik konfiguracyjny i ustaw klucze
+cp .env.example .env
 
 # wypełnij bazę danymi demo
 python seed.py
@@ -48,27 +53,39 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 
 ## ✅ Co już działa
 
+### Bezpieczeństwo
+- Ochrona CSRF - tokeny Flask-WTF we wszystkich formularzach POST
+- Hasła hashowane algorytmem PBKDF2 (Werkzeug)
+- Klucz aplikacji i URL bazy wczytywane z pliku `.env`
+- Świadome strefy czasowe - `datetime.now(timezone.utc)` zamiast deprecated `utcnow()`
+
+### Architektura
+- Kod podzielony na blueprinty: `auth`, `admin`, `trainer`, `client`
+- Fabryka aplikacji `create_app()` w `app.py`
+- Współdzielone rozszerzenia (`db`, `csrf`) w `extensions.py`
+
 ### Logowanie i role
-- Logowanie / wylogowanie z hashowaniem haseł (Werkzeug PBKDF2)
+- Logowanie / wylogowanie z hashowaniem haseł
 - Trzy role: **Admin**, **Trener**, **Klient** - każda widzi tylko swoje widoki
 - Dekoratory na routach pilnują dostępu, nieautoryzowane żądania są przekierowywane
 
 ### Panel Admina
-- **Dashboard** - statystyki na żywo: ilu członków, trenerów, zajęć, aktywnych rezerwacji; feed 8 ostatnich rezerwacji
-- **Członkowie** - pełny CRUD: dodawanie z tworzeniem konta, edycja danych i subskrypcji, usuwanie kaskadowe (usuwa konto + rezerwacje)
+- **Dashboard** - statystyki na żywo: członkowie, trenerzy, zatwierdzone zajęcia, rezerwacje; badge z liczbą zajęć oczekujących na zatwierdzenie; feed 8 ostatnich rezerwacji
+- **Członkowie** - pełny CRUD: dodawanie z tworzeniem konta, edycja danych i subskrypcji, usuwanie kaskadowe; wyszukiwarka po imieniu/nazwisku i filtr po typie karnetu
 - **Trenerzy** - lista ze specjalizacją i stawką godzinową
-- **Zajęcia** - tygodniowy plan posortowany po dniach; dodawanie i usuwanie zajęć; inline widać ile miejsc jest zajętych
+- **Zajęcia** - workflow zatwierdzania: sekcja "Do zatwierdzenia" z przyciskami Zatwierdź / Odrzuć (modal z polem na notatkę); lista zatwierdzonych i odrzuconych propozycji
 - **Sprzęt** - inwentarz z kategorią, statusem (sprawny / serwis / zepsuty) i datą zakupu
 
 ### Panel Trenera
-- **Dashboard** - zajęcia na dziś, łączna liczba unikalnych podopiecznych
-- **Grafik** - pełny tygodniowy plan posortowany pon-nd z aktualnym obłożeniem
+- **Dashboard** - zajęcia na dziś, łączna liczba unikalnych podopiecznych, alert o oczekujących propozycjach
+- **Harmonogram** - podział na: zatwierdzone (z obłożeniem), oczekujące na zatwierdzenie, odrzucone (z powodem odrzucenia)
+- **Propozycja zajęć** - formularz z dniem, godziną, czasem trwania, częstotliwością (co 1/2/3/4 tygodnie) i datą pierwszej sesji
 - **Podopieczni** - lista członków zapisanych na zajęcia trenera ze statusem subskrypcji
 
 ### Panel Klienta
-- **Dashboard** - status subskrypcji, ile dni zostało, 5 ostatnich rezerwacji
-- **Zajęcia** - katalog wszystkich zajęć posortowany po dniach; rezerwacja jednym kliknięciem; guard przed przepełnieniem
-- **Rezerwacje** - historia rezerwacji z możliwością anulowania
+- **Dashboard** - status subskrypcji, ile dni zostało (ostrzeżenie przy <7 dniach), 5 ostatnich rezerwacji z datami sesji
+- **Zajęcia** - karty zatwierdzonych zajęć z listą nadchodzących sesji (do 3); zapis na konkretną sesję z datą; guard przed przepełnieniem i konfliktem terminów
+- **Rezerwacje** - historia rezerwacji z konkretną datą sesji; oznaczenie minionych sesji; możliwość anulowania
 - **Profil** - dane osobowe, typ subskrypcji, łączna liczba aktywnych rezerwacji
 
 ---
@@ -76,16 +93,17 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 ## 🗃️ Model danych
 
 ```
-User ──< Member ──< Booking >── GymClass >── Trainer
-                                             │
-                                        Equipment (osobna tabela)
+User ──< Member ──< Booking >── ClassSession >── GymClass >── Trainer
+                                                              │
+                                                         Equipment (osobna tabela)
 ```
 
 - `User` - konto auth; rola: `admin | trainer | client`
 - `Member` - profil klienta; typ subskrypcji: `monthly | annual | day_pass`
 - `Trainer` - profil trenera ze specjalizacją i stawką
-- `GymClass` - definicja zajęć: dzień, godzina, czas trwania, limit miejsc
-- `Booking` - połączenie Member ↔ GymClass; status: `confirmed | cancelled`
+- `GymClass` - definicja zajęć: dzień, godzina, czas trwania, limit miejsc, częstotliwość, data startu, status (`pending | approved | rejected`), notatka odrzucenia
+- `ClassSession` - konkretne wystąpienie zajęć z datą; generowane automatycznie po zatwierdzeniu na 12 tygodni do przodu
+- `Booking` - rezerwacja klienta na konkretną sesję; status: `confirmed | cancelled`
 - `Equipment` - pozycja inwentarza siłowni
 
 ---
@@ -94,34 +112,29 @@ User ──< Member ──< Booking >── GymClass >── Trainer
 
 ### Członkowie i subskrypcje
 - [ ] Flow przedłużania subskrypcji - admin może przedłużyć lub zmienić typ bez usuwania konta
-- [ ] Automatyczny banner ostrzegawczy gdy zostało < 7 dni subskrypcji
-- [ ] Wyszukiwarka i filtry na liście członków (imię, typ subskrypcji, data wygaśnięcia)
 - [ ] Eksport listy członków do CSV
 
 ### Trenerzy
-- [ ] Formularz edycji trenera (admin zmienia specjalizację, stawkę, przypisane zajęcia)
-- [ ] Widok grafiku w formacie kalendarza dla trenera
+- [ ] Formularz edycji trenera (admin zmienia specjalizację, stawkę)
+- [ ] Widok harmonogramu w formacie kalendarza
 - [ ] Oznaczanie obecności - trener potwierdza kto faktycznie przyszedł
 
 ### Zajęcia i rezerwacje
-- [ ] Lista oczekujących - gdy zajęcia są pełne, klient wchodzi w kolejkę i dostaje miejsce przy anulowaniu
-- [ ] Edycja zajęć - zmiana nazwy, opisu, godziny, pojemności bez usuwania i tworzenia od nowa
-- [ ] Powiadomienie po zapisaniu na zajęcia
-- [ ] Limit rezerwacji na tydzień - żeby jeden klient nie blokował wszystkich miejsc
+- [ ] Lista oczekujących - gdy sesja jest pełna, klient wchodzi w kolejkę
+- [ ] Edycja zajęć - trener może zaktualizować propozycję przed zatwierdzeniem
+- [ ] Limit rezerwacji na tydzień
 
 ### Sprzęt
-- [ ] Dodawanie i edycja sprzętu z panelu admina (teraz jest tylko podgląd)
+- [ ] Pełny CRUD sprzętu z panelu admina (teraz jest tylko podgląd)
 - [ ] Dziennik serwisowy - historia napraw dla każdego urządzenia
-- [ ] Alert na dashboardzie gdy jakiś sprzęt ma status `broken` lub `maintenance`
+- [ ] Alert na dashboardzie gdy sprzęt ma status `broken` lub `maintenance`
 
 ### Raporty i analityka
-- [ ] Wykres obłożenia zajęć w czasie
+- [ ] Wykres obłożenia sesji w czasie
 - [ ] Szacowany przychód na podstawie aktywnych subskrypcji
 - [ ] Ranking najpopularniejszych zajęć
 
 ### Technicznie
-- [ ] Formularz zmiany hasła dla wszystkich ról
-- [ ] Reset hasła przez admina dla klientów
-- [ ] Migracja z SQLite na PostgreSQL pod produkcję
-- [ ] Konfiguracja przez zmienne środowiskowe (`.env` + `python-dotenv`)
-- [ ] Podstawowe testy (pytest) dla logiki rezerwacji i auth
+- [ ] Zmiana hasła (wszystkie role) + reset hasła przez admina
+- [ ] Testy pytest (logika rezerwacji i auth)
+- [ ] Migracja z SQLite na PostgreSQL
