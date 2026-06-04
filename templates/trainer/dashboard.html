@@ -58,7 +58,7 @@
               <td>{{ c.schedule_time }}</td>
               <td class="text-muted">{{ c.duration_minutes }} min</td>
               <td>
-                {% set cnt = c.bookings | selectattr('status','eq','confirmed') | list | length %}
+                {% set cnt = c.sessions | map(attribute='bookings') | sum(start=[]) | selectattr('status','eq','confirmed') | list | length %}
                 <span class="badge {% if cnt >= c.max_capacity %}bg-danger{% else %}bg-success{% endif %}">
                   {{ cnt }}/{{ c.max_capacity }}
                 </span>
@@ -88,11 +88,16 @@
           <dt class="col-5 text-muted fw-normal">Login</dt>
           <dd class="col-7"><code>{{ trainer.user.username }}</code></dd>
         </dl>
-        <div class="mt-3">
+        <div class="mt-3 d-flex flex-column gap-2">
           <a href="/trainer/schedule" class="btn btn-sm w-100"
              style="background:#6366f1;color:#fff;border-radius:8px;font-weight:600">
             <i class="bi bi-calendar3-week me-1"></i> Zobacz pełny harmonogram
           </a>
+          {% if pending_count > 0 %}
+          <a href="/trainer/schedule" class="btn btn-sm w-100 btn-warning">
+            <i class="bi bi-clock me-1"></i> {{ pending_count }} oczekuje na zatwierdzenie
+          </a>
+          {% endif %}
         </div>
       </div>
     </div>

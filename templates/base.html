@@ -134,7 +134,7 @@
       <a href="/trainer/" class="nav-link {% if request.path == '/trainer/' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
-      <a href="/trainer/schedule" class="nav-link {% if '/trainer/schedule' in request.path %}active{% endif %}">
+      <a href="/trainer/schedule" class="nav-link {% if '/trainer/schedule' in request.path or '/trainer/classes' in request.path %}active{% endif %}">
         <i class="bi bi-calendar3-week"></i> Harmonogram
       </a>
       <a href="/trainer/members" class="nav-link {% if '/trainer/members' in request.path %}active{% endif %}">

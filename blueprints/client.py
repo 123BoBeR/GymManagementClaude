@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from extensions import db
-from models import User, GymClass, Booking
+from models import User, GymClass, ClassSession, Booking
 from blueprints.utils import role_required
-from datetime import datetime, date, timedelta
+from datetime import date
 
 bp = Blueprint('client', __name__, url_prefix='/client')
 
@@ -31,29 +31,60 @@ def client_dashboard():
 def client_classes():
     user = db.session.get(User, session['user_id'])
     member = user.member
-    classes = sorted(GymClass.query.all(),
-                     key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
-    booked_ids = {b.class_id for b in Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
-    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count() for c in classes}
-    return render_template('client/classes.html', classes=classes, booked_ids=booked_ids, booking_counts=booking_counts)
+    today = date.today()
+
+    classes = sorted(
+        GymClass.query.filter_by(status='approved').all(),
+        key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time)
+    )
+
+    # Dla każdych zajęć wyznacz najbliższe nadchodzące sesje (max 3)
+    booked_session_ids = {b.session_id for b in Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
+
+    classes_data = []
+    for c in classes:
+        upcoming = [s for s in c.sessions if s.session_date >= today and not s.cancelled][:3]
+        booking_counts = {
+            s.id: Booking.query.filter_by(session_id=s.id, status='confirmed').count()
+            for s in upcoming
+        }
+        classes_data.append({
+            'class': c,
+            'upcoming': upcoming,
+            'booking_counts': booking_counts,
+        })
+
+    return render_template('client/classes.html',
+                           classes_data=classes_data,
+                           booked_session_ids=booked_session_ids)
 
 
-@bp.route('/classes/<int:id>/book', methods=['POST'])
+@bp.route('/sessions/<int:session_id>/book', methods=['POST'])
 @role_required('client')
-def client_book(id):
+def client_book(session_id):
     user = db.session.get(User, session['user_id'])
     member = user.member
-    gym_class = GymClass.query.get_or_404(id)
+    class_session = ClassSession.query.get_or_404(session_id)
+    gym_class = class_session.gym_class
 
-    confirmed = Booking.query.filter_by(class_id=id, status='confirmed').count()
+    if class_session.cancelled:
+        flash('Ta sesja została odwołana.', 'danger')
+        return redirect(url_for('client.client_classes'))
+
+    if class_session.session_date < date.today():
+        flash('Nie można rezerwować przeszłych sesji.', 'danger')
+        return redirect(url_for('client.client_classes'))
+
+    confirmed = Booking.query.filter_by(session_id=session_id, status='confirmed').count()
     if confirmed >= gym_class.max_capacity:
-        flash('Brak wolnych miejsc na te zajęcia.', 'danger')
+        flash('Brak wolnych miejsc na tę sesję.', 'danger')
         return redirect(url_for('client.client_classes'))
 
-    if Booking.query.filter_by(member_id=member.id, class_id=id, status='confirmed').first():
-        flash('Jesteś już zapisany na te zajęcia.', 'warning')
+    if Booking.query.filter_by(member_id=member.id, session_id=session_id, status='confirmed').first():
+        flash('Jesteś już zapisany na tę sesję.', 'warning')
         return redirect(url_for('client.client_classes'))
 
+    # Sprawdź konflikt terminów
     def to_minutes(t_str):
         h, m = map(int, t_str.split(':'))
         return h * 60 + m
@@ -61,12 +92,14 @@ def client_book(id):
     new_start = to_minutes(gym_class.schedule_time)
     new_end = new_start + gym_class.duration_minutes
 
-    existing_bookings = (Booking.query
-                         .filter_by(member_id=member.id, status='confirmed')
-                         .join(GymClass)
-                         .filter(GymClass.schedule_day == gym_class.schedule_day)
-                         .all())
-    for b in existing_bookings:
+    conflicting = (Booking.query
+                   .filter_by(member_id=member.id, status='confirmed')
+                   .join(ClassSession)
+                   .filter(ClassSession.session_date == class_session.session_date)
+                   .join(GymClass, ClassSession.class_id == GymClass.id)
+                   .filter(GymClass.schedule_day == gym_class.schedule_day)
+                   .all())
+    for b in conflicting:
         ex_start = to_minutes(b.gym_class.schedule_time)
         ex_end = ex_start + b.gym_class.duration_minutes
         if new_start < ex_end and ex_start < new_end:
@@ -78,9 +111,9 @@ def client_book(id):
             )
             return redirect(url_for('client.client_classes'))
 
-    db.session.add(Booking(member_id=member.id, class_id=id, status='confirmed'))
+    db.session.add(Booking(member_id=member.id, session_id=session_id, status='confirmed'))
     db.session.commit()
-    flash(f'Zapisano na: {gym_class.name}!', 'success')
+    flash(f'Zapisano na: {gym_class.name} ({class_session.session_date.strftime("%d.%m.%Y")})!', 'success')
     return redirect(url_for('client.client_bookings'))
 
 
@@ -90,7 +123,7 @@ def client_bookings():
     user = db.session.get(User, session['user_id'])
     member = user.member
     bookings = Booking.query.filter_by(member_id=member.id).order_by(Booking.booked_at.desc()).all()
-    return render_template('client/bookings.html', member=member, bookings=bookings)
+    return render_template('client/bookings.html', member=member, bookings=bookings, today=date.today())
 
 
 @bp.route('/bookings/<int:id>/cancel', methods=['POST'])

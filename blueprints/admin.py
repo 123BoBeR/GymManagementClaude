@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from extensions import db
-from models import User, Member, Trainer, GymClass, Booking, Equipment
+from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
 from blueprints.utils import role_required
+from blueprints.sessions import generate_sessions
 from datetime import datetime, date
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -15,12 +16,15 @@ def admin_dashboard():
     stats = {
         'members': Member.query.count(),
         'trainers': Trainer.query.count(),
-        'classes': GymClass.query.count(),
+        'classes': GymClass.query.filter_by(status='approved').count(),
         'bookings': Booking.query.filter_by(status='confirmed').count(),
+        'pending': GymClass.query.filter_by(status='pending').count(),
     }
     recent_bookings = Booking.query.order_by(Booking.booked_at.desc()).limit(8).all()
     return render_template('admin/dashboard.html', stats=stats, recent_bookings=recent_bookings)
 
+
+# ── Członkowie ────────────────────────────────────────────────────────────────
 
 @bp.route('/members')
 @role_required('admin')
@@ -89,6 +93,8 @@ def admin_member_delete(id):
     return redirect(url_for('admin.admin_members'))
 
 
+# ── Trenerzy ──────────────────────────────────────────────────────────────────
+
 @bp.route('/trainers')
 @role_required('admin')
 def admin_trainers():
@@ -96,31 +102,52 @@ def admin_trainers():
     return render_template('admin/trainers.html', trainers=trainers)
 
 
+# ── Zajęcia ───────────────────────────────────────────────────────────────────
+
 @bp.route('/classes')
 @role_required('admin')
 def admin_classes():
-    classes = sorted(GymClass.query.all(),
-                     key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
-    trainers = Trainer.query.all()
-    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count() for c in classes}
-    return render_template('admin/classes.html', classes=classes, trainers=trainers, booking_counts=booking_counts)
-
-
-@bp.route('/classes/new', methods=['POST'])
-@role_required('admin')
-def admin_class_new():
-    gym_class = GymClass(
-        trainer_id=int(request.form.get('trainer_id')),
-        name=request.form.get('name', ''),
-        description=request.form.get('description', ''),
-        max_capacity=int(request.form.get('max_capacity', 10)),
-        schedule_day=request.form.get('schedule_day', ''),
-        schedule_time=request.form.get('schedule_time', ''),
-        duration_minutes=int(request.form.get('duration_minutes', 60)),
+    pending = GymClass.query.filter_by(status='pending').order_by(GymClass.id.desc()).all()
+    approved = sorted(
+        GymClass.query.filter_by(status='approved').all(),
+        key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time)
     )
-    db.session.add(gym_class)
+    rejected = GymClass.query.filter_by(status='rejected').order_by(GymClass.id.desc()).all()
+
+    def booking_count(c):
+        return (Booking.query
+                .join(ClassSession)
+                .filter(ClassSession.class_id == c.id, Booking.status == 'confirmed')
+                .count())
+
+    booking_counts = {c.id: booking_count(c) for c in approved}
+    return render_template('admin/classes.html',
+                           pending=pending, approved=approved, rejected=rejected,
+                           booking_counts=booking_counts)
+
+
+@bp.route('/classes/<int:id>/approve', methods=['POST'])
+@role_required('admin')
+def admin_class_approve(id):
+    gym_class = GymClass.query.get_or_404(id)
+    gym_class.status = 'approved'
+    gym_class.rejection_note = None
+    sessions = generate_sessions(gym_class, weeks=12)
+    for s in sessions:
+        db.session.add(s)
     db.session.commit()
-    flash('Zajęcia dodane.', 'success')
+    flash(f'Zajęcia "{gym_class.name}" zatwierdzone. Wygenerowano {len(sessions)} sesji.', 'success')
+    return redirect(url_for('admin.admin_classes'))
+
+
+@bp.route('/classes/<int:id>/reject', methods=['POST'])
+@role_required('admin')
+def admin_class_reject(id):
+    gym_class = GymClass.query.get_or_404(id)
+    gym_class.status = 'rejected'
+    gym_class.rejection_note = request.form.get('rejection_note', '').strip()
+    db.session.commit()
+    flash(f'Zajęcia "{gym_class.name}" odrzucone.', 'warning')
     return redirect(url_for('admin.admin_classes'))
 
 
@@ -133,6 +160,8 @@ def admin_class_delete(id):
     flash('Zajęcia usunięte.', 'success')
     return redirect(url_for('admin.admin_classes'))
 
+
+# ── Sprzęt ────────────────────────────────────────────────────────────────────
 
 @bp.route('/equipment')
 @role_required('admin')

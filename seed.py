@@ -1,9 +1,10 @@
 from app import create_app
 from extensions import db
-from models import User, Member, Trainer, GymClass, Booking, Equipment
+from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
+from blueprints.sessions import generate_sessions
+from datetime import date, datetime
 
 app = create_app()
-from datetime import date, datetime
 
 
 def seed():
@@ -19,7 +20,7 @@ def seed():
         # ── Trenerzy ─────────────────────────────────────────────────────────
         trainer_rows = [
             ('jan.kowalski',      'Jan',    'Kowalski',    'Trening siłowy i kulturystyka',       120.0),
-            ('anna.nowak',        'Anna',   'Nowak',        'Yoga i pilates',                     100.0),
+            ('anna.nowak',        'Anna',   'Nowak',       'Yoga i pilates',                      100.0),
             ('piotr.wisniewski',  'Piotr',  'Wiśniewski',  'CrossFit i trening funkcjonalny',     130.0),
             ('marta.wojcik',      'Marta',  'Wójcik',      'Cardio i aerobik',                    90.0),
         ]
@@ -37,34 +38,77 @@ def seed():
 
         jan, anna, piotr, marta = trainers
 
-        # ── Zajęcia ──────────────────────────────────────────────────────────
+        # ── Zajęcia (zatwierdzone) ────────────────────────────────────────────
+        # start_date: pierwszy poniedziałek / wtorek itd. od 2026-06-01
         classes_rows = [
-            (jan.id,   'Trening Siłowy Podstawowy',   'Podstawy treningu z wolnymi ciężarami i maszynami.',         15, 'Poniedziałek', '10:00', 60),
-            (jan.id,   'Trening Siłowy Zaawansowany', 'Zaawansowane techniki i periodyzacja treningu siłowego.',    10, 'Środa',        '11:00', 90),
-            (anna.id,  'Yoga dla Początkujących',     'Podstawowe asany, praca z oddechem i relaksacja.',           20, 'Wtorek',       '09:00', 60),
-            (anna.id,  'Pilates',                     'Wzmacnianie core i poprawa postawy ciała.',                  15, 'Czwartek',     '10:00', 60),
-            (piotr.id, 'CrossFit',                    'Intensywny trening funkcjonalny łączący siłę i wydolność.',  12, 'Środa',        '18:00', 60),
-            (piotr.id, 'Trening Obwodowy',            'Trening całego ciała w formie stacji obwodowych.',           16, 'Piątek',       '16:00', 45),
-            (marta.id, 'Cardio Blast',                'Wysokointensywny trening cardio spalający kalorie.',         25, 'Piątek',       '17:00', 45),
-            (marta.id, 'Aerobik',                     'Klasyczny aerobik przy muzyce — dla każdego.',              20, 'Sobota',       '10:00', 60),
+            # (trainer, name, desc, capacity, day, time, duration, freq, start)
+            (jan.id,   'Trening Siłowy Podstawowy',   'Podstawy treningu z wolnymi ciężarami.',          15, 'Poniedziałek', '10:00', 60,  1, date(2026, 6, 1)),
+            (jan.id,   'Trening Siłowy Zaawansowany', 'Zaawansowane techniki i periodyzacja.',           10, 'Środa',        '11:00', 90,  1, date(2026, 6, 1)),
+            (anna.id,  'Yoga dla Początkujących',     'Podstawowe asany, oddech i relaksacja.',          20, 'Wtorek',       '09:00', 60,  1, date(2026, 6, 1)),
+            (anna.id,  'Pilates',                     'Wzmacnianie core i poprawa postawy.',             15, 'Czwartek',     '10:00', 60,  1, date(2026, 6, 1)),
+            (piotr.id, 'CrossFit',                    'Intensywny trening łączący siłę i wydolność.',    12, 'Środa',        '18:00', 60,  1, date(2026, 6, 1)),
+            (piotr.id, 'Trening Obwodowy',            'Trening całego ciała w formie stacji.',           16, 'Piątek',       '16:00', 45,  2, date(2026, 6, 1)),
+            (marta.id, 'Cardio Blast',                'Wysokointensywny trening spalający kalorie.',     25, 'Piątek',       '17:00', 45,  1, date(2026, 6, 1)),
+            (marta.id, 'Aerobik',                     'Klasyczny aerobik przy muzyce.',                 20, 'Sobota',       '10:00', 60,  1, date(2026, 6, 1)),
         ]
         classes = []
         for row in classes_rows:
-            c = GymClass(trainer_id=row[0], name=row[1], description=row[2],
-                         max_capacity=row[3], schedule_day=row[4],
-                         schedule_time=row[5], duration_minutes=row[6])
+            c = GymClass(
+                trainer_id=row[0], name=row[1], description=row[2],
+                max_capacity=row[3], schedule_day=row[4], schedule_time=row[5],
+                duration_minutes=row[6], frequency_weeks=row[7], start_date=row[8],
+                status='approved',
+            )
             db.session.add(c)
             db.session.flush()
             classes.append(c)
 
         sil_podst, sil_zaaw, yoga, pilates, crossfit, obwodowy, cardio, aerobik = classes
 
+        # ── Przykładowa oczekująca propozycja trenera ─────────────────────────
+        pending = GymClass(
+            trainer_id=jan.id,
+            name='Trening Mobilności',
+            description='Rozciąganie i poprawa zakresu ruchu.',
+            max_capacity=12,
+            schedule_day='Wtorek',
+            schedule_time='17:00',
+            duration_minutes=60,
+            frequency_weeks=1,
+            start_date=date(2026, 7, 1),
+            status='pending',
+        )
+        db.session.add(pending)
+
+        # Przykładowo odrzucona propozycja
+        rejected = GymClass(
+            trainer_id=anna.id,
+            name='Zaawansowana Yoga',
+            description='Dla osób z min. rocznym doświadczeniem.',
+            max_capacity=8,
+            schedule_day='Piątek',
+            schedule_time='08:00',
+            duration_minutes=90,
+            frequency_weeks=2,
+            start_date=date(2026, 7, 4),
+            status='rejected',
+            rejection_note='Zbyt mała przewidywana frekwencja o tej godzinie. Proponuję przesunąć na 18:00.',
+        )
+        db.session.add(rejected)
+        db.session.flush()
+
+        # ── Generuj sesje dla zatwierdzonych zajęć ────────────────────────────
+        for c in classes:
+            for s in generate_sessions(c, weeks=12):
+                db.session.add(s)
+        db.session.flush()
+
         # ── Klienci ───────────────────────────────────────────────────────────
         members_rows = [
-            ('tomasz.krol',       'Tomasz',   'Król',       '500-100-200', 'monthly',  date(2026, 6, 30)),
-            ('ewa.dabrowska',     'Ewa',      'Dąbrowska',  '500-200-300', 'annual',   date(2026, 12, 31)),
-            ('michal.kowalczyk',  'Michał',   'Kowalczyk',  '500-300-400', 'monthly',  date(2026, 5, 31)),
-            ('karolina.szymanska','Karolina', 'Szymańska',  '500-400-500', 'day_pass', date(2026, 5, 20)),
+            ('tomasz.krol',        'Tomasz',   'Król',       '500-100-200', 'monthly',  date(2026, 6, 30)),
+            ('ewa.dabrowska',      'Ewa',      'Dąbrowska',  '500-200-300', 'annual',   date(2026, 12, 31)),
+            ('michal.kowalczyk',   'Michał',   'Kowalczyk',  '500-300-400', 'monthly',  date(2026, 5, 31)),
+            ('karolina.szymanska', 'Karolina', 'Szymańska',  '500-400-500', 'day_pass', date(2026, 5, 20)),
         ]
         members = []
         for username, first, last, phone, sub_type, sub_end in members_rows:
@@ -81,36 +125,45 @@ def seed():
 
         tomasz, ewa, michal, karolina = members
 
-        # ── Rezerwacje ────────────────────────────────────────────────────────
+        # ── Rezerwacje (na pierwszą dostępną sesję każdych zajęć) ─────────────
+        def first_session(gym_class):
+            return ClassSession.query.filter_by(class_id=gym_class.id).order_by(ClassSession.session_date).first()
+
         bookings_rows = [
-            (tomasz.id,   sil_podst.id, 'confirmed'),
-            (tomasz.id,   crossfit.id,  'confirmed'),
-            (tomasz.id,   aerobik.id,   'cancelled'),   # anulowana — do demonstracji
-            (ewa.id,      yoga.id,      'confirmed'),
-            (ewa.id,      pilates.id,   'confirmed'),
-            (ewa.id,      cardio.id,    'confirmed'),
-            (michal.id,   crossfit.id,  'confirmed'),
-            (michal.id,   sil_podst.id, 'confirmed'),
-            (michal.id,   obwodowy.id,  'confirmed'),
-            (karolina.id, yoga.id,      'confirmed'),
-            (karolina.id, aerobik.id,   'confirmed'),
+            (tomasz.id,   sil_podst, 'confirmed'),
+            (tomasz.id,   crossfit,  'confirmed'),
+            (tomasz.id,   aerobik,   'cancelled'),
+            (ewa.id,      yoga,      'confirmed'),
+            (ewa.id,      pilates,   'confirmed'),
+            (ewa.id,      cardio,    'confirmed'),
+            (michal.id,   crossfit,  'confirmed'),
+            (michal.id,   sil_podst, 'confirmed'),
+            (michal.id,   obwodowy,  'confirmed'),
+            (karolina.id, yoga,      'confirmed'),
+            (karolina.id, aerobik,   'confirmed'),
         ]
-        for member_id, class_id, status in bookings_rows:
-            db.session.add(Booking(member_id=member_id, class_id=class_id, status=status,
-                                   booked_at=datetime(2026, 5, 10, 14, 30)))
+        for member_id, gym_class, status in bookings_rows:
+            s = first_session(gym_class)
+            if s:
+                db.session.add(Booking(
+                    member_id=member_id,
+                    session_id=s.id,
+                    status=status,
+                    booked_at=datetime(2026, 5, 10, 14, 30),
+                ))
 
         # ── Sprzęt ────────────────────────────────────────────────────────────
         equipment_rows = [
-            ('Sztanga olimpijska 20kg',        'Siłownia',     'working',     date(2023, 1, 15)),
-            ('Bieżnia ProForm 9000 (szt. 1)',   'Cardio',       'working',     date(2022, 6, 1)),
-            ('Bieżnia ProForm 9000 (szt. 2)',   'Cardio',       'working',     date(2022, 6, 1)),
-            ('Orbitrek Horizon EX-59',          'Cardio',       'maintenance', date(2021, 3, 20)),
-            ('Maty do jogi (x10)',              'Yoga/Pilates', 'working',     date(2023, 9, 1)),
-            ('Komplet hantli 2–40 kg',          'Siłownia',     'working',     date(2022, 1, 10)),
-            ('Rower stacjonarny LifeFitness',   'Cardio',       'broken',      date(2020, 11, 5)),
-            ('Klatka na wolne ciężary',         'Siłownia',     'working',     date(2023, 5, 1)),
-            ('Zestaw TRX',                      'CrossFit',     'working',     date(2023, 7, 15)),
-            ('Skakanki (x20)',                  'CrossFit',     'working',     date(2024, 1, 10)),
+            ('Sztanga olimpijska 20kg',       'Siłownia',     'working',     date(2023, 1, 15)),
+            ('Bieżnia ProForm 9000 (szt. 1)', 'Cardio',       'working',     date(2022, 6, 1)),
+            ('Bieżnia ProForm 9000 (szt. 2)', 'Cardio',       'working',     date(2022, 6, 1)),
+            ('Orbitrek Horizon EX-59',        'Cardio',       'maintenance', date(2021, 3, 20)),
+            ('Maty do jogi (x10)',            'Yoga/Pilates', 'working',     date(2023, 9, 1)),
+            ('Komplet hantli 2-40 kg',        'Siłownia',     'working',     date(2022, 1, 10)),
+            ('Rower stacjonarny LifeFitness', 'Cardio',       'broken',      date(2020, 11, 5)),
+            ('Klatka na wolne ciężary',       'Siłownia',     'working',     date(2023, 5, 1)),
+            ('Zestaw TRX',                    'CrossFit',     'working',     date(2023, 7, 15)),
+            ('Skakanki (x20)',                'CrossFit',     'working',     date(2024, 1, 10)),
         ]
         for name, category, status, purchase_date in equipment_rows:
             db.session.add(Equipment(name=name, category=category,

@@ -53,20 +53,45 @@ class GymClass(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     max_capacity = db.Column(db.Integer, default=10)
-    schedule_day = db.Column(db.String(20))    # Poniedziałek…Niedziela
-    schedule_time = db.Column(db.String(10))   # HH:MM
+    schedule_day = db.Column(db.String(20))         # Poniedziałek…Niedziela
+    schedule_time = db.Column(db.String(10))        # HH:MM
     duration_minutes = db.Column(db.Integer, default=60)
+    frequency_weeks = db.Column(db.Integer, default=1, nullable=False)  # co ile tygodni
+    start_date = db.Column(db.Date, nullable=True)  # data pierwszej sesji
 
-    bookings = db.relationship('Booking', backref='gym_class', cascade='all, delete-orphan')
+    # status propozycji: pending | approved | rejected
+    status = db.Column(db.String(20), default='pending', nullable=False)
+    rejection_note = db.Column(db.Text, nullable=True)
+
+    sessions = db.relationship(
+        'ClassSession', backref='gym_class',
+        cascade='all, delete-orphan',
+        order_by='ClassSession.session_date'
+    )
+
+
+class ClassSession(db.Model):
+    __tablename__ = 'class_sessions'
+    id = db.Column(db.Integer, primary_key=True)
+    class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
+    session_date = db.Column(db.Date, nullable=False)
+    cancelled = db.Column(db.Boolean, default=False)
+
+    bookings = db.relationship('Booking', backref='session', cascade='all, delete-orphan')
 
 
 class Booking(db.Model):
     __tablename__ = 'bookings'
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
-    class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('class_sessions.id'), nullable=False)
     booked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
+
+    @property
+    def gym_class(self):
+        """Skrót dla wstecznej kompatybilności szablonów."""
+        return self.session.gym_class
 
 
 class Equipment(db.Model):

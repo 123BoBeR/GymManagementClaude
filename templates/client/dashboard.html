@@ -82,9 +82,9 @@
           <tbody>
             {% for b in bookings %}
             <tr>
-              <td class="ps-3 fw-semibold">{{ b.gym_class.name }}</td>
-              <td class="text-muted" style="font-size:.82rem">{{ b.gym_class.schedule_day }}</td>
-              <td>{{ b.gym_class.schedule_time }}</td>
+              <td class="ps-3 fw-semibold">{{ b.session.gym_class.name }}</td>
+              <td class="text-muted" style="font-size:.82rem">{{ b.session.session_date.strftime('%d.%m.%Y') }}</td>
+              <td>{{ b.session.gym_class.schedule_time }}</td>
               <td>
                 {% if b.status == 'confirmed' %}
                   <span class="badge bg-success">Aktywna</span>

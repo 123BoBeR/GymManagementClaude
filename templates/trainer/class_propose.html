@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Zaproponuj zajęcia — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-plus-circle-fill me-2" style="color:#e94560"></i>Zaproponuj zajęcia</h1>
+  <p>Wypełnij formularz - propozycja trafi do administratora do zatwierdzenia</p>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-body p-4">
+    <form method="POST">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nazwa zajęć</label>
+        <input type="text" name="name" class="form-control" required placeholder="np. Yoga dla zaawansowanych">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Opis</label>
+        <textarea name="description" class="form-control" rows="2"
+                  placeholder="Krótki opis dla klientów..."></textarea>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">Dzień tygodnia</label>
+          <select name="schedule_day" class="form-select" required>
+            {% for d in days %}
+              <option value="{{ d }}">{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Godzina</label>
+          <input type="time" name="schedule_time" class="form-control" required value="09:00">
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">Czas trwania (min)</label>
+          <input type="number" name="duration_minutes" class="form-control" value="60" min="15" max="180">
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Maks. miejsc</label>
+          <input type="number" name="max_capacity" class="form-control" value="15" min="1" max="100">
+        </div>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col">
+          <label class="form-label fw-semibold">Częstotliwość</label>
+          <select name="frequency_weeks" class="form-select">
+            <option value="1">Co tydzień</option>
+            <option value="2">Co 2 tygodnie</option>
+            <option value="3">Co 3 tygodnie</option>
+            <option value="4">Co 4 tygodnie (miesięcznie)</option>
+          </select>
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Data pierwszej sesji</label>
+          <input type="date" name="start_date" class="form-control" required>
+        </div>
+      </div>
+
+      <div class="alert alert-info py-2 mb-4" style="font-size:.83rem;border-radius:8px">
+        <i class="bi bi-info-circle me-1"></i>
+        Po wysłaniu propozycja trafi do administratora. Sesje zostaną wygenerowane dopiero po zatwierdzeniu.
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn"
+                style="background:#e94560;color:#fff;border-radius:8px;font-weight:600">
+          <i class="bi bi-send me-1"></i> Wyślij propozycję
+        </button>
+        <a href="/trainer/schedule" class="btn btn-outline-secondary" style="border-radius:8px">Anuluj</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

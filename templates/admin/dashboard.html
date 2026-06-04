@@ -30,9 +30,14 @@
     <div class="stat-card">
       <div class="d-flex justify-content-between align-items-start mb-3">
         <div class="ico" style="background:#ede9fe"><i class="bi bi-calendar3-week" style="color:#7c3aed"></i></div>
+        {% if stats.pending > 0 %}
+        <a href="/admin/classes" class="badge bg-warning text-dark text-decoration-none">
+          {{ stats.pending }} oczekuje
+        </a>
+        {% endif %}
       </div>
       <div class="val">{{ stats.classes }}</div>
-      <div class="lbl">Zajęć w tygodniu</div>
+      <div class="lbl">Zatwierdzonych zajęć</div>
     </div>
   </div>
   <div class="col-sm-6 col-xl-3">
@@ -66,8 +71,8 @@
         {% for b in recent_bookings %}
         <tr>
           <td class="ps-3 fw-semibold">{{ b.member.first_name }} {{ b.member.last_name }}</td>
-          <td>{{ b.gym_class.name }}</td>
-          <td>{{ b.gym_class.trainer.first_name }} {{ b.gym_class.trainer.last_name }}</td>
+          <td>{{ b.session.gym_class.name }}</td>
+          <td>{{ b.session.gym_class.trainer.first_name }} {{ b.session.gym_class.trainer.last_name }}</td>
           <td class="text-muted">{{ b.booked_at.strftime('%d.%m.%Y %H:%M') }}</td>
           <td>
             {% if b.status == 'confirmed' %}

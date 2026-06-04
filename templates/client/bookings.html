@@ -15,7 +15,7 @@
         <tr>
           <th class="ps-3">Zajęcia</th>
           <th>Trener</th>
-          <th>Dzień</th>
+          <th>Data sesji</th>
           <th>Godzina</th>
           <th>Data zapisu</th>
           <th>Status</th>
@@ -25,16 +25,19 @@
       <tbody>
         {% for b in bookings %}
         <tr>
-          <td class="ps-3 fw-semibold">{{ b.gym_class.name }}</td>
+          <td class="ps-3 fw-semibold">{{ b.session.gym_class.name }}</td>
           <td class="text-muted">
-            {{ b.gym_class.trainer.first_name }} {{ b.gym_class.trainer.last_name }}
+            {{ b.session.gym_class.trainer.first_name }} {{ b.session.gym_class.trainer.last_name }}
           </td>
           <td>
             <span class="badge" style="background:#f1f5f9;color:#475569;font-weight:500">
-              {{ b.gym_class.schedule_day }}
+              {{ b.session.session_date.strftime('%d.%m.%Y') }}
             </span>
+            {% if b.session.session_date < today %}
+              <span class="badge bg-secondary ms-1" style="font-size:.7rem">Miniona</span>
+            {% endif %}
           </td>
-          <td class="fw-semibold">{{ b.gym_class.schedule_time }}</td>
+          <td class="fw-semibold">{{ b.session.gym_class.schedule_time }}</td>
           <td class="text-muted" style="font-size:.82rem">
             {{ b.booked_at.strftime('%d.%m.%Y %H:%M') }}
           </td>
