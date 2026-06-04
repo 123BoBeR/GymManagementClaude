@@ -199,3 +199,46 @@ def admin_class_delete(id):
 def admin_equipment():
     equipment = Equipment.query.all()
     return render_template('admin/equipment.html', equipment=equipment)
+
+
+@bp.route('/equipment/new', methods=['POST'])
+@role_required('admin')
+def admin_equipment_new():
+    purchase_date_str = request.form.get('purchase_date', '')
+    purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date() if purchase_date_str else None
+    equip = Equipment(
+        name=request.form.get('name', '').strip(),
+        category=request.form.get('category', '').strip(),
+        status=request.form.get('status', 'working'),
+        purchase_date=purchase_date,
+    )
+    db.session.add(equip)
+    db.session.commit()
+    flash(f'Sprzęt "{equip.name}" dodany.', 'success')
+    return redirect(url_for('admin.admin_equipment'))
+
+
+@bp.route('/equipment/<int:id>/edit', methods=['POST'])
+@role_required('admin')
+def admin_equipment_edit(id):
+    equip = Equipment.query.get_or_404(id)
+    equip.name = request.form.get('name', equip.name).strip()
+    equip.category = request.form.get('category', equip.category).strip()
+    equip.status = request.form.get('status', equip.status)
+    purchase_date_str = request.form.get('purchase_date', '')
+    if purchase_date_str:
+        equip.purchase_date = datetime.strptime(purchase_date_str, '%Y-%m-%d').date()
+    db.session.commit()
+    flash(f'Sprzęt "{equip.name}" zaktualizowany.', 'success')
+    return redirect(url_for('admin.admin_equipment'))
+
+
+@bp.route('/equipment/<int:id>/delete', methods=['POST'])
+@role_required('admin')
+def admin_equipment_delete(id):
+    equip = Equipment.query.get_or_404(id)
+    name = equip.name
+    db.session.delete(equip)
+    db.session.commit()
+    flash(f'Sprzęt "{name}" usunięty.', 'success')
+    return redirect(url_for('admin.admin_equipment'))

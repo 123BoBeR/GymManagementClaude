@@ -2,11 +2,18 @@
 {% block title %}Sprzęt — GymApp{% endblock %}
 
 {% block content %}
-<div class="ph">
-  <h1><i class="bi bi-tools me-2" style="color:#e94560"></i>Sprzęt</h1>
-  <p>Stan i ewidencja wyposażenia siłowni</p>
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-tools me-2" style="color:#e94560"></i>Sprzęt</h1>
+    <p>Stan i ewidencja wyposażenia siłowni</p>
+  </div>
+  <button class="btn btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#addEquipmentModal"
+          style="background:#e94560;color:#fff;border-radius:8px">
+    <i class="bi bi-plus-lg"></i> Dodaj sprzęt
+  </button>
 </div>
 
+<!-- Statystyki -->
 <div class="row g-3 mb-4">
   <div class="col-sm-4">
     <div class="stat-card">
@@ -31,8 +38,10 @@
   </div>
 </div>
 
+<!-- Tabela -->
 <div class="card">
   <div class="card-body p-0">
+    {% if equipment %}
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr>
@@ -40,6 +49,7 @@
           <th>Kategoria</th>
           <th>Stan</th>
           <th>Data zakupu</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -48,7 +58,7 @@
           <td class="ps-3 fw-semibold">{{ e.name }}</td>
           <td>
             <span class="badge" style="background:#f1f5f9;color:#475569;font-weight:500">
-              {{ e.category }}
+              {{ e.category or '—' }}
             </span>
           </td>
           <td>
@@ -63,10 +73,119 @@
           <td class="text-muted">
             {{ e.purchase_date.strftime('%d.%m.%Y') if e.purchase_date else '—' }}
           </td>
+          <td class="pe-3">
+            <button class="btn btn-sm btn-outline-secondary me-1"
+                    data-bs-toggle="modal" data-bs-target="#editEquipModal{{ e.id }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form action="/admin/equipment/{{ e.id }}/delete" method="POST" class="d-inline"
+                  onsubmit="return confirm('Usunąć {{ e.name }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">Brak sprzętu. Dodaj pierwszy.</p>
+    {% endif %}
   </div>
 </div>
+
+<!-- Modal: dodaj sprzęt -->
+<div class="modal fade" id="addEquipmentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold">Nowy sprzęt</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/equipment/new" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nazwa</label>
+            <input type="text" name="name" class="form-control" required placeholder="np. Bieżnia ProForm">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Kategoria</label>
+            <input type="text" name="category" class="form-control" placeholder="np. Cardio, Siłownia, CrossFit">
+          </div>
+          <div class="row g-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Stan</label>
+              <select name="status" class="form-select">
+                <option value="working">Sprawny</option>
+                <option value="maintenance">Serwis</option>
+                <option value="broken">Uszkodzony</option>
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Data zakupu</label>
+              <input type="date" name="purchase_date" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn" style="background:#e94560;color:#fff;font-weight:600">
+            <i class="bi bi-plus-lg me-1"></i> Dodaj
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modale edycji sprzętu -->
+{% for e in equipment %}
+<div class="modal fade" id="editEquipModal{{ e.id }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold">Edytuj sprzęt</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/equipment/{{ e.id }}/edit" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nazwa</label>
+            <input type="text" name="name" class="form-control" required value="{{ e.name }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Kategoria</label>
+            <input type="text" name="category" class="form-control" value="{{ e.category or '' }}">
+          </div>
+          <div class="row g-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Stan</label>
+              <select name="status" class="form-select">
+                <option value="working"     {% if e.status == 'working'     %}selected{% endif %}>Sprawny</option>
+                <option value="maintenance" {% if e.status == 'maintenance' %}selected{% endif %}>Serwis</option>
+                <option value="broken"      {% if e.status == 'broken'      %}selected{% endif %}>Uszkodzony</option>
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Data zakupu</label>
+              <input type="date" name="purchase_date" class="form-control"
+                     value="{{ e.purchase_date.strftime('%Y-%m-%d') if e.purchase_date else '' }}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn" style="background:#e94560;color:#fff;font-weight:600">
+            <i class="bi bi-check-lg me-1"></i> Zapisz
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
 {% endblock %}
