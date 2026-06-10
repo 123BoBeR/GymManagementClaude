@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 
@@ -499,6 +499,6 @@ class PaymentService:
             return False, "Płatność już zrealizowana."
 
         payment.status = "completed"
-        payment.paid_at = datetime.utcnow()
+        payment.paid_at = datetime.now(timezone.utc)
         db.session.commit()
         return True, "Płatność zrealizowana pomyślnie."

@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
@@ -29,7 +29,7 @@ class Member(db.Model):
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=False)
     phone = db.Column(db.String(20))
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     subscription_type = db.Column(db.String(30))   # monthly | annual | day_pass
     subscription_end = db.Column(db.Date)
 
@@ -68,7 +68,7 @@ class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
-    booked_at = db.Column(db.DateTime, default=datetime.utcnow)
+    booked_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
 
 
@@ -77,7 +77,7 @@ class Waitlist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
-    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+    added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Payment(db.Model):
@@ -88,7 +88,7 @@ class Payment(db.Model):
     month_year = db.Column(db.String(7), nullable=False)   # format: "YYYY-MM"
     status = db.Column(db.String(20), default='pending')    # pending | completed
     transfer_number = db.Column(db.String(60))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     paid_at = db.Column(db.DateTime)
 
 
