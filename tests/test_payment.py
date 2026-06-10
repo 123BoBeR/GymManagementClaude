@@ -1,6 +1,6 @@
 """Testy serwisu płatności (PaymentService)."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from models import db, Payment
 from services import PaymentService, BANK_ACCOUNT
 
@@ -28,7 +28,7 @@ class TestPaymentService:
         db.session.add(Payment(member_id=member.id, amount=99.0,
                                month_year=today_str, status="completed",
                                transfer_number="TRF-0000-0000-0000",
-                               paid_at=datetime.utcnow()))
+                               paid_at=datetime.now(timezone.utc)))
         db.session.commit()
         months = PaymentService.months_for_member(member)
         current = next(m for m in months if m["month_year"] == today_str)
@@ -85,7 +85,7 @@ class TestPaymentService:
         db.session.add(Payment(member_id=member.id, amount=99.0,
                                month_year=today_str, status="completed",
                                transfer_number="TRF-1111-2222-3333",
-                               paid_at=datetime.utcnow()))
+                               paid_at=datetime.now(timezone.utc)))
         db.session.commit()
         ok, data = PaymentService.initiate(member.id, today_str)
         assert ok is False

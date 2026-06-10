@@ -178,7 +178,7 @@ def admin_member_new():
 @app.route('/admin/members/<int:id>/edit', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_member_edit(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     if request.method == 'POST':
         sub_end_str = request.form.get('subscription_end', '')
         sub_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date() if sub_end_str else None
@@ -224,7 +224,7 @@ def admin_members_export():
 @app.route('/admin/members/<int:id>/reset-password', methods=['POST'])
 @role_required('admin')
 def admin_member_reset_password(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     new_password = request.form.get('new_password', '').strip()
     if len(new_password) < 6:
         flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
@@ -238,7 +238,7 @@ def admin_member_reset_password(id):
 @app.route('/admin/members/<int:id>/renew', methods=['POST'])
 @role_required('admin')
 def admin_member_renew(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     months = int(request.form.get('months', 1))
     base = max(member.subscription_end, date.today()) if member.subscription_end else date.today()
     # Dodaj miesiące ręcznie (unikamy dateutil)
@@ -259,7 +259,7 @@ def admin_member_renew(id):
 @app.route('/admin/members/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_member_delete(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     _, msg = MemberService.delete(member)
     flash(msg, 'success')
     return redirect(url_for('admin_members'))
@@ -295,7 +295,7 @@ def admin_trainer_new():
 @app.route('/admin/trainers/<int:id>/edit', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_trainer_edit(id):
-    trainer = Trainer.query.get_or_404(id)
+    trainer = db.get_or_404(Trainer, id)
     if request.method == 'POST':
         ok, msg = TrainerService.update(
             trainer=trainer,
@@ -313,7 +313,7 @@ def admin_trainer_edit(id):
 @app.route('/admin/trainers/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_trainer_delete(id):
-    trainer = Trainer.query.get_or_404(id)
+    trainer = db.get_or_404(Trainer, id)
     _, msg = TrainerService.delete(trainer)
     flash(msg, 'success')
     return redirect(url_for('admin_trainers'))
@@ -355,7 +355,7 @@ def admin_class_new():
 @app.route('/admin/classes/<int:id>/edit', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_class_edit(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     trainers = Trainer.query.all()
     if request.method == 'POST':
         gym_class.name = request.form.get('name', gym_class.name)
@@ -374,7 +374,7 @@ def admin_class_edit(id):
 @app.route('/admin/classes/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_class_delete(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     db.session.delete(gym_class)
     db.session.commit()
     flash('Zajęcia usunięte.', 'success')
@@ -408,7 +408,7 @@ def admin_equipment_new():
 @app.route('/admin/equipment/<int:id>/edit', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_equipment_edit(id):
-    equipment = Equipment.query.get_or_404(id)
+    equipment = db.get_or_404(Equipment, id)
     if request.method == 'POST':
         pd_str = request.form.get('purchase_date', '')
         purchase_date = datetime.strptime(pd_str, '%Y-%m-%d').date() if pd_str else None
@@ -428,7 +428,7 @@ def admin_equipment_edit(id):
 @app.route('/admin/equipment/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_equipment_delete(id):
-    equipment = Equipment.query.get_or_404(id)
+    equipment = db.get_or_404(Equipment, id)
     _, msg = EquipmentService.delete(equipment)
     flash(msg, 'success')
     return redirect(url_for('admin_equipment'))
@@ -731,7 +731,7 @@ def admin_payments():
 def client_class_detail(id):
     user = db.session.get(User, session['user_id'])
     member = user.member
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     cnt = Booking.query.filter_by(class_id=id, status='confirmed').count()
     booked = Booking.query.filter_by(member_id=member.id, class_id=id, status='confirmed').first() is not None
     in_waitlist = Waitlist.query.filter_by(member_id=member.id, class_id=id).first() is not None
@@ -747,7 +747,7 @@ def client_class_detail(id):
 @app.route('/admin/members/<int:id>/payments')
 @role_required('admin')
 def admin_member_payments(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     payments = (Payment.query.filter_by(member_id=id)
                 .order_by(Payment.created_at.desc()).all())
     total_paid = sum(p.amount for p in payments if p.status == 'completed')
@@ -760,7 +760,7 @@ def admin_member_payments(id):
 @app.route('/admin/classes/<int:id>/members')
 @role_required('admin')
 def admin_class_members(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     bookings = (Booking.query.filter_by(class_id=id, status='confirmed')
                 .order_by(Booking.booked_at).all())
     return render_template('admin/class_members.html',
@@ -773,7 +773,7 @@ def admin_class_members(id):
 @role_required('trainer')
 def trainer_class_members(id):
     user = db.session.get(User, session['user_id'])
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     if gym_class.trainer_id != user.trainer.id:
         flash('Brak dostępu do tych zajęć.', 'danger')
         return redirect(url_for('trainer_schedule'))
