@@ -1,3 +1,4 @@
+import json
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
 from services import (BookingService, MemberService, TrainerService,
@@ -88,8 +89,49 @@ def admin_dashboard():
         'classes': GymClass.query.count(),
         'bookings': Booking.query.filter_by(status='confirmed').count(),
     }
-    recent_bookings = Booking.query.order_by(Booking.booked_at.desc()).limit(8).all()
-    return render_template('admin/dashboard.html', stats=stats, recent_bookings=recent_bookings)
+    recent_bookings = Booking.query.order_by(Booking.booked_at.desc()).limit(6).all()
+
+    # Dochody miesięczne — ostatnie 6 miesięcy
+    _PL_SHORT = {1:'Sty',2:'Lut',3:'Mar',4:'Kwi',5:'Maj',6:'Cze',
+                 7:'Lip',8:'Sie',9:'Wrz',10:'Paź',11:'Lis',12:'Gru'}
+    revenue_map = {}
+    for p in Payment.query.filter_by(status='completed').all():
+        revenue_map[p.month_year] = revenue_map.get(p.month_year, 0) + p.amount
+
+    cur = date.today().replace(day=1)
+    rev_labels, rev_data = [], []
+    for _ in range(6):
+        key = cur.strftime('%Y-%m')
+        rev_labels.insert(0, f"{_PL_SHORT[cur.month]} {cur.year}")
+        rev_data.insert(0, round(revenue_map.get(key, 0), 2))
+        cur = cur.replace(month=cur.month - 1) if cur.month > 1 else cur.replace(year=cur.year - 1, month=12)
+
+    # Podział typów karnetów
+    sub_labels = ['Miesięczny', 'Roczny', 'Dzienny']
+    sub_data = [
+        Member.query.filter_by(subscription_type='monthly').count(),
+        Member.query.filter_by(subscription_type='annual').count(),
+        Member.query.filter_by(subscription_type='day_pass').count(),
+    ]
+
+    # Top 5 zajęć wg liczby rezerwacji
+    class_stats = sorted(
+        [(gc.name, Booking.query.filter_by(class_id=gc.id, status='confirmed').count())
+         for gc in GymClass.query.all()],
+        key=lambda x: -x[1]
+    )[:5]
+
+    return render_template(
+        'admin/dashboard.html',
+        stats=stats,
+        recent_bookings=recent_bookings,
+        rev_labels=json.dumps(rev_labels),
+        rev_data=json.dumps(rev_data),
+        sub_labels=json.dumps(sub_labels),
+        sub_data=json.dumps(sub_data),
+        class_labels=json.dumps([c[0] for c in class_stats]),
+        class_data=json.dumps([c[1] for c in class_stats]),
+    )
 
 
 @app.route('/admin/members')
