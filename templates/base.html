@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="pl" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +7,65 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    :root { --sb: 240px; --bg-dark: #0f172a; --accent: #e94560; }
-    body { background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; }
+    /* ── Tematy ───────────────────────────────────────────────────────────── */
+    :root {
+      --sb: 240px;
+      --accent: #e94560;
+
+      /* light (domyślny) */
+      --bg-sidebar:   #0f172a;
+      --bg-body:      #f1f5f9;
+      --bg-card:      #ffffff;
+      --bg-card-hdr:  #ffffff;
+      --bg-table-hd:  #f8fafc;
+      --bg-input:     #ffffff;
+      --border-card:  #f1f5f9;
+      --text-primary: #1e293b;
+      --text-muted:   #64748b;
+      --text-th:      #64748b;
+      --shadow-card:  0 1px 3px rgba(0,0,0,.06);
+    }
+
+    [data-theme="dark"] {
+      --bg-body:      #0f172a;
+      --bg-card:      #1e293b;
+      --bg-card-hdr:  #1e293b;
+      --bg-table-hd:  #263349;
+      --bg-input:     #263349;
+      --border-card:  rgba(255,255,255,.07);
+      --text-primary: #f1f5f9;
+      --text-muted:   #94a3b8;
+      --text-th:      #94a3b8;
+      --shadow-card:  0 1px 3px rgba(0,0,0,.3);
+    }
+
+    /* ── Przełącznik ciemnego trybu ───────────────────────────────────────── */
+    .dark-toggle {
+      background: rgba(255,255,255,.08);
+      border: none;
+      color: rgba(255,255,255,.7);
+      border-radius: 8px;
+      padding: .35rem .6rem;
+      font-size: .82rem;
+      cursor: pointer;
+      transition: background .18s;
+      display: flex; align-items: center; gap: .4rem;
+      width: 100%; margin-bottom: .5rem;
+    }
+    .dark-toggle:hover { background: rgba(255,255,255,.14); color: #fff; }
+
+    body {
+      background: var(--bg-body);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      transition: background .25s, color .25s;
+    }
 
     /* sidebar */
     .sidebar {
       position: fixed; top: 0; left: 0;
       width: var(--sb); height: 100vh;
-      background: var(--bg-dark);
+      background: var(--bg-sidebar);
       display: flex; flex-direction: column;
       z-index: 100; overflow-y: auto;
     }
@@ -55,33 +106,64 @@
 
     /* page header */
     .ph { margin-bottom: 1.5rem; }
-    .ph h1 { font-size: 1.45rem; font-weight: 700; color: #1e293b; margin: 0; }
-    .ph p  { color: #64748b; font-size: .87rem; margin: .15rem 0 0; }
+    .ph h1 { font-size: 1.45rem; font-weight: 700; color: var(--text-primary); margin: 0; }
+    .ph p  { color: var(--text-muted); font-size: .87rem; margin: .15rem 0 0; }
 
     /* stat card */
     .stat-card {
-      background: #fff; border-radius: 12px; padding: 1.2rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      background: var(--bg-card); border-radius: 12px; padding: 1.2rem;
+      box-shadow: var(--shadow-card);
     }
     .stat-card .ico {
       width: 42px; height: 42px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
     }
-    .stat-card .val { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
-    .stat-card .lbl { color: #64748b; font-size: .78rem; }
+    .stat-card .val { font-size: 1.8rem; font-weight: 700; color: var(--text-primary); }
+    .stat-card .lbl { color: var(--text-muted); font-size: .78rem; }
 
     /* card overrides */
-    .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .card {
+      border: none; border-radius: 12px;
+      box-shadow: var(--shadow-card);
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
     .card-header {
-      background: #fff; border-bottom: 1px solid #f1f5f9;
+      background: var(--bg-card-hdr); border-bottom: 1px solid var(--border-card);
       border-radius: 12px 12px 0 0 !important; padding: .9rem 1.2rem;
+      color: var(--text-primary);
     }
     .card-header h5 { margin: 0; font-weight: 600; font-size: .95rem; }
 
     /* table */
+    .table { --bs-table-bg: transparent; color: var(--text-primary); }
+    .table-light { --bs-table-bg: var(--bg-table-hd); color: var(--text-primary); }
+    .table-hover > tbody > tr:hover > * { --bs-table-bg: rgba(255,255,255,.04); }
     table th { font-weight: 600; font-size: .77rem; text-transform: uppercase;
-               letter-spacing: .4px; color: #64748b; }
+               letter-spacing: .4px; color: var(--text-th); }
     table td { font-size: .875rem; vertical-align: middle; }
+
+    /* inputs dark mode */
+    [data-theme="dark"] .form-control,
+    [data-theme="dark"] .form-select {
+      background: var(--bg-input);
+      border-color: rgba(255,255,255,.15);
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .form-control:focus,
+    [data-theme="dark"] .form-select:focus {
+      background: var(--bg-input);
+      color: var(--text-primary);
+      border-color: var(--accent);
+    }
+    [data-theme="dark"] .modal-content {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .modal-header,
+    [data-theme="dark"] .modal-footer {
+      border-color: var(--border-card);
+    }
 
     /* sub badges */
     .badge-monthly { background: #dbeafe; color: #1d4ed8; }
@@ -162,6 +244,10 @@
   </nav>
 
   <div class="sb-footer">
+    <button class="dark-toggle" id="darkToggle" onclick="toggleDark()">
+      <i class="bi bi-moon-fill" id="darkIcon"></i>
+      <span id="darkLabel">Tryb ciemny</span>
+    </button>
     {% if session.role != 'client' %}
     <button type="button" class="btn btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#pwdModal"
             style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:none;font-size:.82rem">
@@ -228,5 +314,38 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Aplikuj motyw przed renderowaniem - bez migotania
+  (function() {
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+
+  function toggleDark() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateToggle(next);
+  }
+
+  function updateToggle(theme) {
+    const icon  = document.getElementById('darkIcon');
+    const label = document.getElementById('darkLabel');
+    if (!icon || !label) return;
+    if (theme === 'dark') {
+      icon.className  = 'bi bi-sun-fill';
+      label.textContent = 'Tryb jasny';
+    } else {
+      icon.className  = 'bi bi-moon-fill';
+      label.textContent = 'Tryb ciemny';
+    }
+  }
+
+  // Ustaw ikonę przy starcie
+  updateToggle(document.documentElement.getAttribute('data-theme') || 'light');
+</script>
 </body>
 </html>
