@@ -1,7 +1,7 @@
-from flask import Flask, render_template, redirect, url_for, request, session, flash
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
+from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
 from services import (BookingService, MemberService, TrainerService,
-                      EquipmentService, SubscriptionFactory)
+                      EquipmentService, SubscriptionFactory, PaymentService)
 from functools import wraps
 from datetime import datetime, date
 
@@ -420,6 +420,43 @@ def client_profile():
     days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
     return render_template('client/profile.html', member=member, today=date.today(),
                            bookings_count=bookings_count, days_left=days_left)
+
+
+# ── Client — płatności ───────────────────────────────────────────────────────
+
+@app.route('/client/payments')
+@role_required('client')
+def client_payments():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    months = PaymentService.months_for_member(member)
+    return render_template('client/payments.html', member=member, months=months)
+
+
+@app.route('/client/payments/initiate', methods=['POST'])
+@role_required('client')
+def client_payment_initiate():
+    user = db.session.get(User, session['user_id'])
+    data = request.get_json() or {}
+    ok, result = PaymentService.initiate(user.member.id, data.get('month_year', ''))
+    return jsonify({"ok": ok, **result})
+
+
+@app.route('/client/payments/<int:payment_id>/confirm', methods=['POST'])
+@role_required('client')
+def client_payment_confirm(payment_id):
+    user = db.session.get(User, session['user_id'])
+    ok, msg = PaymentService.confirm(payment_id, user.member.id)
+    return jsonify({"ok": ok, "message": msg})
+
+
+# ── Admin — płatności ────────────────────────────────────────────────────────
+
+@app.route('/admin/payments')
+@role_required('admin')
+def admin_payments():
+    payments = Payment.query.order_by(Payment.created_at.desc()).all()
+    return render_template('admin/payments.html', payments=payments)
 
 
 if __name__ == '__main__':

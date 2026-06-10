@@ -1,5 +1,5 @@
 from app import app
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment
+from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
 from datetime import date, datetime
 
 
@@ -112,6 +112,33 @@ def seed():
         for name, category, status, purchase_date in equipment_rows:
             db.session.add(Equipment(name=name, category=category,
                                      status=status, purchase_date=purchase_date))
+
+        # ── Płatności (symulowane) ────────────────────────────────────────────
+        payment_rows = [
+            # Tomasz (miesięczny) — styczeń–maj opłacone, czerwiec oczekuje
+            (tomasz.id,   99.0,  '2026-01', 'completed', 'TRF-1023-4456-7891', datetime(2026, 1, 10,  9, 15)),
+            (tomasz.id,   99.0,  '2026-02', 'completed', 'TRF-2034-5567-8902', datetime(2026, 2,  8, 10, 20)),
+            (tomasz.id,   99.0,  '2026-03', 'completed', 'TRF-3045-6678-9013', datetime(2026, 3, 12, 11,  5)),
+            (tomasz.id,   99.0,  '2026-04', 'completed', 'TRF-4056-7789-0124', datetime(2026, 4,  7,  8, 45)),
+            (tomasz.id,   99.0,  '2026-05', 'completed', 'TRF-5067-8890-1235', datetime(2026, 5,  5, 14, 30)),
+            # Ewa (roczny) — jednorazowa opłata roczna za styczeń
+            (ewa.id,     799.0,  '2026-01', 'completed', 'TRF-6078-9901-2346', datetime(2026, 1,  3, 16,  0)),
+            # Michał (miesięczny) — styczeń–marzec opłacone, kwiecień–czerwiec oczekuje
+            (michal.id,   99.0,  '2026-01', 'completed', 'TRF-7089-0012-3457', datetime(2026, 1, 15, 12,  0)),
+            (michal.id,   99.0,  '2026-02', 'completed', 'TRF-8090-1123-4568', datetime(2026, 2, 14, 13, 30)),
+            (michal.id,   99.0,  '2026-03', 'completed', 'TRF-9001-2234-5679', datetime(2026, 3, 10, 15,  0)),
+            # Karolina (karnet dzienny) — tylko maj opłacony
+            (karolina.id, 29.0,  '2026-05', 'completed', 'TRF-0012-3345-6780', datetime(2026, 5, 20, 10,  0)),
+        ]
+        for member_id, amount, month_year, status, transfer_number, paid_at in payment_rows:
+            db.session.add(Payment(
+                member_id=member_id,
+                amount=amount,
+                month_year=month_year,
+                status=status,
+                transfer_number=transfer_number,
+                paid_at=paid_at,
+            ))
 
         db.session.commit()
 

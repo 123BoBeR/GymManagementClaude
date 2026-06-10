@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% block title %}Płatności — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-credit-card-fill" style="color:var(--accent)"></i> Płatności</h1>
+    <p>Historia i status opłat za karnet</p>
+  </div>
+  <div class="text-end">
+    {% if member.subscription_type == 'monthly' %}
+      <span class="badge fs-6" style="background:#dbeafe;color:#1d4ed8">Miesięczny · 99 zł/mies.</span>
+    {% elif member.subscription_type == 'annual' %}
+      <span class="badge fs-6" style="background:#dcfce7;color:#15803d">Roczny · 799 zł/rok</span>
+    {% else %}
+      <span class="badge fs-6" style="background:#fef9c3;color:#92400e">Karnet dzienny · 29 zł</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Podsumowanie -->
+<div class="row g-3 mb-4">
+  {% set paid = months | selectattr('status', 'eq', 'completed') | list %}
+  {% set unpaid = months | selectattr('status', 'eq', 'pending') | list %}
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#dcfce7"><i class="bi bi-check-circle-fill text-success"></i></div>
+        <div>
+          <div class="val">{{ paid | length }}</div>
+          <div class="lbl">Opłacone miesiące</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#fee2e2"><i class="bi bi-exclamation-circle-fill text-danger"></i></div>
+        <div>
+          <div class="val">{{ unpaid | length }}</div>
+          <div class="lbl">Nieopłacone</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#dbeafe"><i class="bi bi-cash-coin" style="color:#1d4ed8"></i></div>
+        <div>
+          <div class="val">{{ paid | sum(attribute='amount') | round(2) }} zł</div>
+          <div class="lbl">Łącznie zapłacono</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabela miesięcy -->
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-calendar3 me-2"></i>Historia płatności</h5>
+  </div>
+  <div class="card-body p-0">
+    <table class="table mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Miesiąc</th>
+          <th>Kwota</th>
+          <th>Status</th>
+          <th>Data płatności</th>
+          <th>Nr przelewu</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in months | reverse %}
+        <tr>
+          <td class="fw-semibold">{{ m.label }}</td>
+          <td>{{ "%.2f" | format(m.amount) }} zł</td>
+          <td>
+            {% if m.status == 'completed' %}
+              <span class="badge" style="background:#dcfce7;color:#15803d">
+                <i class="bi bi-check-circle-fill me-1"></i>Opłacono
+              </span>
+            {% else %}
+              <span class="badge" style="background:#fee2e2;color:#b91c1c">
+                <i class="bi bi-x-circle-fill me-1"></i>Nieopłacone
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-muted">
+            {% if m.paid_at %}{{ m.paid_at.strftime('%d.%m.%Y %H:%M') }}{% else %}—{% endif %}
+          </td>
+          <td>
+            {% if m.transfer_number %}
+              <code style="font-size:.8rem">{{ m.transfer_number }}</code>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            {% if m.status != 'completed' %}
+              <button class="btn btn-sm btn-danger pay-btn"
+                      data-month="{{ m.month_year }}"
+                      data-label="{{ m.label }}"
+                      data-amount="{{ '%.2f' | format(m.amount) }}">
+                <i class="bi bi-credit-card me-1"></i>Opłać
+              </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal płatności -->
+<div class="modal fade" id="payModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+
+      <!-- Stan 1: dane przelewu -->
+      <div id="pay-step-initial">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title"><i class="bi bi-bank me-2"></i>Przelew bankowy</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">
+            Wykonaj przelew na poniższe dane, a następnie kliknij
+            <strong>Symuluj płatność</strong>.
+          </p>
+          <div class="rounded-3 p-3 mb-2" style="background:#f8fafc;border:1px solid #e2e8f0">
+            <div class="row g-3">
+              <div class="col-12">
+                <div class="text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">Odbiorca</div>
+                <div class="fw-semibold">GymApp Sp. z o.o.</div>
+              </div>
+              <div class="col-12">
+                <div class="text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">Numer konta</div>
+                <div class="fw-bold font-monospace" style="letter-spacing:.5px">74 1160 2202 0000 0003 1752 9304</div>
+              </div>
+              <div class="col-6">
+                <div class="text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">Kwota</div>
+                <div class="fw-bold fs-5" id="pay-amount-display" style="color:var(--accent)"></div>
+              </div>
+              <div class="col-6">
+                <div class="text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">Okres</div>
+                <div class="fw-semibold" id="pay-month-display"></div>
+              </div>
+              <div class="col-12">
+                <div class="text-muted mb-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.5px">Tytuł przelewu</div>
+                <div class="font-monospace fw-semibold" id="pay-ref-display" style="font-size:.9rem;color:#1e293b"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Anuluj</button>
+          <button type="button" class="btn btn-danger btn-sm" id="pay-simulate-btn">
+            <i class="bi bi-play-circle-fill me-1"></i>Symuluj płatność
+          </button>
+        </div>
+      </div>
+
+      <!-- Stan 2: loading -->
+      <div id="pay-step-loading" class="d-none">
+        <div class="modal-body text-center py-5 px-4">
+          <div class="spinner-border mb-4" role="status"
+               style="color:var(--accent);width:3.5rem;height:3.5rem;border-width:.3rem"></div>
+          <p class="fw-semibold fs-6 mb-1" id="pay-loading-msg">Łączenie z bankiem...</p>
+          <p class="text-muted small">Proszę nie zamykać okna przeglądarki</p>
+          <div class="progress mt-3" style="height:4px;border-radius:2px">
+            <div class="progress-bar bg-danger progress-bar-striped progress-bar-animated"
+                 id="pay-progress" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stan 3: sukces -->
+      <div id="pay-step-success" class="d-none">
+        <div class="modal-body text-center py-5 px-4">
+          <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-4"
+               style="width:80px;height:80px;background:#dcfce7">
+            <i class="bi bi-check-lg" style="font-size:2.4rem;color:#15803d"></i>
+          </div>
+          <h5 class="fw-bold mb-2">Płatność zrealizowana!</h5>
+          <p class="text-muted small mb-0">Środki zostały zaksięgowane. Strona odświeży się automatycznie.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentPaymentId = null;
+  let payModal = null;
+
+  document.querySelectorAll('.pay-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const monthYear = btn.dataset.month;
+      const label     = btn.dataset.label;
+      const amount    = btn.dataset.amount;
+
+      const resp = await fetch('/client/payments/initiate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({month_year: monthYear}),
+      });
+      const data = await resp.json();
+      if (!data.ok) { alert(data.error || 'Błąd inicjalizacji płatności.'); return; }
+
+      currentPaymentId = data.payment_id;
+      document.getElementById('pay-amount-display').textContent = amount + ' zł';
+      document.getElementById('pay-month-display').textContent = label;
+      document.getElementById('pay-ref-display').textContent = data.transfer_number;
+
+      document.getElementById('pay-step-initial').classList.remove('d-none');
+      document.getElementById('pay-step-loading').classList.add('d-none');
+      document.getElementById('pay-step-success').classList.add('d-none');
+
+      payModal = new bootstrap.Modal(document.getElementById('payModal'));
+      payModal.show();
+    });
+  });
+
+  document.getElementById('pay-simulate-btn').addEventListener('click', async () => {
+    document.getElementById('pay-step-initial').classList.add('d-none');
+    document.getElementById('pay-step-loading').classList.remove('d-none');
+
+    const msgs = [
+      'Łączenie z bankiem...',
+      'Weryfikacja danych konta...',
+      'Autoryzacja przelewu...',
+      'Przetwarzanie transakcji...',
+      'Finalizowanie płatności...',
+    ];
+    const bar = document.getElementById('pay-progress');
+    let step = 0;
+    const total = msgs.length;
+
+    const interval = setInterval(() => {
+      document.getElementById('pay-loading-msg').textContent = msgs[step % total];
+      bar.style.width = Math.min(100, Math.round((step + 1) / total * 100)) + '%';
+      step++;
+    }, 680);
+
+    await new Promise(r => setTimeout(r, 3600));
+    clearInterval(interval);
+    bar.style.width = '100%';
+
+    const resp = await fetch(`/client/payments/${currentPaymentId}/confirm`, {method: 'POST'});
+    const data = await resp.json();
+
+    document.getElementById('pay-step-loading').classList.add('d-none');
+    document.getElementById('pay-step-success').classList.remove('d-none');
+
+    setTimeout(() => window.location.reload(), 2000);
+  });
+</script>
+{% endblock %}

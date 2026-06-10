@@ -34,6 +34,7 @@ class Member(db.Model):
     subscription_end = db.Column(db.Date)
 
     bookings = db.relationship('Booking', backref='member', cascade='all, delete-orphan')
+    payments = db.relationship('Payment', backref='member', cascade='all, delete-orphan')
 
 
 class Trainer(db.Model):
@@ -69,6 +70,18 @@ class Booking(db.Model):
     class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
     booked_at = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
+
+
+class Payment(db.Model):
+    __tablename__ = 'payments'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    month_year = db.Column(db.String(7), nullable=False)   # format: "YYYY-MM"
+    status = db.Column(db.String(20), default='pending')    # pending | completed
+    transfer_number = db.Column(db.String(60))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime)
 
 
 class Equipment(db.Model):

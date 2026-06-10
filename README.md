@@ -70,6 +70,19 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 - **Zajęcia** - katalog wszystkich zajęć posortowany po dniach; rezerwacja jednym kliknięciem; guard przed przepełnieniem
 - **Rezerwacje** - historia rezerwacji z możliwością anulowania
 - **Profil** - dane osobowe, typ subskrypcji, łączna liczba aktywnych rezerwacji
+- **Płatności** - historia opłat miesięcznych, przycisk „Opłać" uruchamia symulowany przelew bankowy
+
+### Moduł płatności (symulowany)
+Klient wchodzi w zakładkę **Płatności** i widzi tabelę miesięcy od daty dołączenia do dziś — każdy miesiąc ma status *Opłacono* lub *Nieopłacone*.
+
+Kliknięcie **Opłać** otwiera modal z danymi do przelewu:
+- numer konta odbiorcy
+- wygenerowany unikalny tytuł przelewu (format `TRF-XXXX-XXXX-XXXX`)
+- kwota zależna od typu karnetu (miesięczny 99 zł / roczny 799 zł / dzienny 29 zł)
+
+Kliknięcie **Symuluj płatność** uruchamia animację ładowania z paskiem postępu i kolejnymi komunikatami (`Łączenie z bankiem...` → `Weryfikacja danych...` → `Autoryzacja przelewu...` itd.). Po ~3,5 s transakcja jest oznaczana jako `completed` w bazie, modal pokazuje ekran sukcesu, a strona odświeża się automatycznie.
+
+Admin widzi wszystkie transakcje z podsumowaniem (liczba opłaconych, łączny przychód) w zakładce **Płatności**.
 
 ---
 
@@ -77,8 +90,9 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 
 ```
 User ──< Member ──< Booking >── GymClass >── Trainer
-                                             │
-                                        Equipment (osobna tabela)
+              │
+              └──< Payment
+Equipment (osobna tabela)
 ```
 
 - `User` - konto auth; rola: `admin | trainer | client`
@@ -87,41 +101,27 @@ User ──< Member ──< Booking >── GymClass >── Trainer
 - `GymClass` - definicja zajęć: dzień, godzina, czas trwania, limit miejsc
 - `Booking` - połączenie Member ↔ GymClass; status: `confirmed | cancelled`
 - `Equipment` - pozycja inwentarza siłowni
+- `Payment` - płatność za miesiąc; status: `pending | completed`; pola: `month_year`, `amount`, `transfer_number`, `paid_at`
 
 ---
 
 ## 🔮 Plany na przyszłość
 
 ### Członkowie i subskrypcje
-- [ ] Flow przedłużania subskrypcji - admin może przedłużyć lub zmienić typ bez usuwania konta
 - [ ] Automatyczny banner ostrzegawczy gdy zostało < 7 dni subskrypcji
 - [ ] Wyszukiwarka i filtry na liście członków (imię, typ subskrypcji, data wygaśnięcia)
 - [ ] Eksport listy członków do CSV
 
-### Trenerzy
-- [ ] Formularz edycji trenera (admin zmienia specjalizację, stawkę, przypisane zajęcia)
-- [ ] Widok grafiku w formacie kalendarza dla trenera
-- [ ] Oznaczanie obecności - trener potwierdza kto faktycznie przyszedł
-
 ### Zajęcia i rezerwacje
 - [ ] Lista oczekujących - gdy zajęcia są pełne, klient wchodzi w kolejkę i dostaje miejsce przy anulowaniu
 - [ ] Edycja zajęć - zmiana nazwy, opisu, godziny, pojemności bez usuwania i tworzenia od nowa
-- [ ] Powiadomienie po zapisaniu na zajęcia
-- [ ] Limit rezerwacji na tydzień - żeby jeden klient nie blokował wszystkich miejsc
-
-### Sprzęt
-- [ ] Dodawanie i edycja sprzętu z panelu admina (teraz jest tylko podgląd)
-- [ ] Dziennik serwisowy - historia napraw dla każdego urządzenia
-- [ ] Alert na dashboardzie gdy jakiś sprzęt ma status `broken` lub `maintenance`
+- [ ] Limit rezerwacji na tydzień
 
 ### Raporty i analityka
 - [ ] Wykres obłożenia zajęć w czasie
-- [ ] Szacowany przychód na podstawie aktywnych subskrypcji
 - [ ] Ranking najpopularniejszych zajęć
 
 ### Technicznie
 - [ ] Formularz zmiany hasła dla wszystkich ról
-- [ ] Reset hasła przez admina dla klientów
 - [ ] Migracja z SQLite na PostgreSQL pod produkcję
 - [ ] Konfiguracja przez zmienne środowiskowe (`.env` + `python-dotenv`)
-- [ ] Podstawowe testy (pytest) dla logiki rezerwacji i auth

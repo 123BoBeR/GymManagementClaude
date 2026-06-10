@@ -10,10 +10,26 @@ Wzorce projektowe zastosowane w tym module:
 
 from __future__ import annotations
 
+import random
 from abc import ABC, abstractmethod
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment
+from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
+
+
+_PL_MONTHS = {
+    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+    5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+    9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień",
+}
+
+BANK_ACCOUNT = "74 1160 2202 0000 0003 1752 9304"
+
+SUBSCRIPTION_PRICES: dict[str, float] = {
+    "monthly":  99.0,
+    "annual":  799.0,
+    "day_pass": 29.0,
+}
 
 
 # ── Strategy Pattern: strategie typów karnetów ───────────────────────────────
@@ -277,3 +293,94 @@ class EquipmentService:
         db.session.delete(equipment)
         db.session.commit()
         return True, "Sprzęt usunięty."
+
+
+class PaymentService:
+    """Serwis obsługi płatności (symulowanych)."""
+
+    @staticmethod
+    def amount_for(member: Member) -> float:
+        return SUBSCRIPTION_PRICES.get(member.subscription_type or "monthly", 99.0)
+
+    @staticmethod
+    def generate_transfer_number() -> str:
+        n = random.randint(100_000_000_000, 999_999_999_999)
+        s = str(n)
+        return f"TRF-{s[0:4]}-{s[4:8]}-{s[8:12]}"
+
+    @staticmethod
+    def months_for_member(member: Member) -> list[dict]:
+        """Generuje listę miesięcy od dołączenia do dziś z informacją o płatności."""
+        start = (member.joined_at.date() if member.joined_at else date.today()).replace(day=1)
+        today_first = date.today().replace(day=1)
+
+        result = []
+        current = start
+        while current <= today_first:
+            month_str = current.strftime("%Y-%m")
+            payment = Payment.query.filter_by(
+                member_id=member.id, month_year=month_str
+            ).first()
+            result.append({
+                "month_year": month_str,
+                "label": f"{_PL_MONTHS[current.month]} {current.year}",
+                "status": payment.status if payment else "pending",
+                "payment_id": payment.id if payment else None,
+                "amount": payment.amount if payment else PaymentService.amount_for(member),
+                "paid_at": payment.paid_at if payment else None,
+                "transfer_number": payment.transfer_number if payment else None,
+            })
+            if current.month == 12:
+                current = current.replace(year=current.year + 1, month=1)
+            else:
+                current = current.replace(month=current.month + 1)
+
+        return result
+
+    @staticmethod
+    def initiate(member_id: int, month_year: str) -> tuple[bool, dict]:
+        """Tworzy lub pobiera oczekującą płatność za podany miesiąc."""
+        member = db.session.get(Member, member_id)
+        if not member:
+            return False, {"error": "Klient nie istnieje."}
+
+        existing = Payment.query.filter_by(member_id=member_id, month_year=month_year).first()
+        if existing and existing.status == "completed":
+            return False, {"error": "Ten miesiąc jest już opłacony."}
+
+        if not existing:
+            payment = Payment(
+                member_id=member_id,
+                amount=PaymentService.amount_for(member),
+                month_year=month_year,
+                status="pending",
+                transfer_number=PaymentService.generate_transfer_number(),
+            )
+            db.session.add(payment)
+            db.session.commit()
+        else:
+            payment = existing
+
+        return True, {
+            "payment_id": payment.id,
+            "transfer_number": payment.transfer_number,
+            "amount": payment.amount,
+            "month_year": month_year,
+            "bank_account": BANK_ACCOUNT,
+        }
+
+    @staticmethod
+    def confirm(payment_id: int, member_id: int) -> tuple[bool, str]:
+        """Potwierdza płatność (symulacja)."""
+        payment = db.session.get(Payment, payment_id)
+        if not payment:
+            return False, "Płatność nie istnieje."
+        if payment.member_id != member_id:
+            return False, "Brak dostępu."
+        if payment.status == "completed":
+            return False, "Płatność już zrealizowana."
+
+        payment.status = "completed"
+        payment.paid_at = datetime.utcnow()
+        db.session.commit()
+        return True, "Płatność zrealizowana pomyślnie."
