@@ -523,6 +523,7 @@ def client_dashboard():
 def client_classes():
     user = db.session.get(User, session['user_id'])
     member = user.member
+    view = request.args.get('view', 'grid')
     classes = sorted(GymClass.query.all(),
                      key=lambda c: (DAY_ORDER.index(c.schedule_day)
                                     if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
@@ -533,10 +534,16 @@ def client_classes():
     waitlist_ids = {w.class_id for w in Waitlist.query.filter_by(member_id=member.id).all()}
     waitlist_pos = {cid: WaitlistService.position(member.id, cid) for cid in waitlist_ids}
     waitlist_counts = {c.id: Waitlist.query.filter_by(class_id=c.id).count() for c in classes}
+    # Grupowanie po dniach dla widoku tygodniowego
+    week = {day: [] for day in DAY_ORDER}
+    for c in classes:
+        if c.schedule_day in week:
+            week[c.schedule_day].append(c)
     return render_template('client/classes.html', classes=classes,
                            booked_ids=booked_ids, booking_counts=booking_counts,
                            waitlist_ids=waitlist_ids, waitlist_pos=waitlist_pos,
-                           waitlist_counts=waitlist_counts)
+                           waitlist_counts=waitlist_counts, week=week,
+                           day_order=DAY_ORDER, view=view)
 
 
 @app.route('/client/classes/<int:id>/book', methods=['POST'])
@@ -700,6 +707,72 @@ def client_payment_confirm(payment_id):
 def admin_payments():
     payments = Payment.query.order_by(Payment.created_at.desc()).all()
     return render_template('admin/payments.html', payments=payments)
+
+
+# ── Client — szczegóły zajęć ────────────────────────────────────────────────
+
+@app.route('/client/classes/<int:id>')
+@role_required('client')
+def client_class_detail(id):
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    gym_class = GymClass.query.get_or_404(id)
+    cnt = Booking.query.filter_by(class_id=id, status='confirmed').count()
+    booked = Booking.query.filter_by(member_id=member.id, class_id=id, status='confirmed').first() is not None
+    in_waitlist = Waitlist.query.filter_by(member_id=member.id, class_id=id).first() is not None
+    wpos = WaitlistService.position(member.id, id) if in_waitlist else None
+    wcnt = Waitlist.query.filter_by(class_id=id).count()
+    return render_template('client/class_detail.html',
+                           gym_class=gym_class, cnt=cnt, booked=booked,
+                           in_waitlist=in_waitlist, wpos=wpos, wcnt=wcnt)
+
+
+# ── Admin — płatności klienta ────────────────────────────────────────────────
+
+@app.route('/admin/members/<int:id>/payments')
+@role_required('admin')
+def admin_member_payments(id):
+    member = Member.query.get_or_404(id)
+    payments = (Payment.query.filter_by(member_id=id)
+                .order_by(Payment.created_at.desc()).all())
+    total_paid = sum(p.amount for p in payments if p.status == 'completed')
+    return render_template('admin/member_payments.html',
+                           member=member, payments=payments, total_paid=total_paid)
+
+
+# ── Admin — uczestnicy zajęć ─────────────────────────────────────────────────
+
+@app.route('/admin/classes/<int:id>/members')
+@role_required('admin')
+def admin_class_members(id):
+    gym_class = GymClass.query.get_or_404(id)
+    bookings = (Booking.query.filter_by(class_id=id, status='confirmed')
+                .order_by(Booking.booked_at).all())
+    return render_template('admin/class_members.html',
+                           gym_class=gym_class, bookings=bookings, today=date.today())
+
+
+# ── Trainer — uczestnicy zajęć ───────────────────────────────────────────────
+
+@app.route('/trainer/classes/<int:id>/members')
+@role_required('trainer')
+def trainer_class_members(id):
+    user = db.session.get(User, session['user_id'])
+    gym_class = GymClass.query.get_or_404(id)
+    if gym_class.trainer_id != user.trainer.id:
+        flash('Brak dostępu do tych zajęć.', 'danger')
+        return redirect(url_for('trainer_schedule'))
+    bookings = (Booking.query.filter_by(class_id=id, status='confirmed')
+                .order_by(Booking.booked_at).all())
+    return render_template('trainer/class_members.html',
+                           gym_class=gym_class, bookings=bookings, today=date.today())
+
+
+# ── Błędy ────────────────────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
 
 
 if __name__ == '__main__':

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Nie znaleziono — GymApp{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column align-items-center justify-content-center text-center py-5">
+  <div style="font-size:6rem;font-weight:800;color:#e94560;line-height:1">404</div>
+  <h2 class="mt-2 mb-1 fw-bold">Strona nie istnieje</h2>
+  <p class="text-muted mb-4" style="max-width:360px">
+    Szukana strona mogła zostać usunięta, przeniesiona albo nigdy nie istniała.
+  </p>
+  <a href="/" class="btn btn-lg" style="background:#e94560;color:#fff;border-radius:10px;padding:.6rem 2rem">
+    <i class="bi bi-house-fill me-2"></i>Wróć na start
+  </a>
+</div>
+{% endblock %}

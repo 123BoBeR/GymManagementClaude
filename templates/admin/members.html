@@ -85,6 +85,11 @@
                     data-bs-toggle="modal" data-bs-target="#renewModal{{ m.id }}">
               <i class="bi bi-credit-card"></i>
             </button>
+            <!-- Płatności -->
+            <a href="/admin/members/{{ m.id }}/payments"
+               class="btn btn-sm btn-outline-info me-1" title="Historia płatności">
+              <i class="bi bi-receipt"></i>
+            </a>
             <!-- Edytuj -->
             <a href="/admin/members/{{ m.id }}/edit"
                class="btn btn-sm btn-outline-secondary me-1">

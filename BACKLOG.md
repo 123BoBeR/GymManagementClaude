@@ -6,6 +6,8 @@ Zadania do zrobienia w gałęzi `develop`. `master` zostaje nienaruszony do prez
 
 ## Do zrobienia
 
+> Wszystkie poniższe zadania zostały zrealizowane — sekcja zachowana jako historia.
+
 ### #23 Lista uczestników zajęć
 **Priorytet:** wysoki | **Szacunek:** ~1h
 
@@ -106,3 +108,10 @@ Konteneryzacja aplikacji jako osobny temat (przedmiot IT Systems Management).
 - [x] Wyszukiwarka i filtr na liście klientów (JS, bez przeładowania)
 - [x] Reset hasła klienta przez admina (`/admin/members/<id>/reset-password`)
 - [x] Szybkie przedłużenie karnetu (+1m / +3m / +1rok) bez dateutil
+- [x] Lista uczestników zajęć (admin + trener) — #23
+- [x] Szczegóły zajęć dla klienta z widokiem detail — #24
+- [x] Custom strona 404 — #25
+- [x] Bugfix kolumna Dzień w grafiku trenera — #26
+- [x] Historia płatności klienta w panelu admina — #27
+- [x] Tygodniowy widok zajęć (toggle karty/tydzień) — #28
+- [x] Walidacja konfliktu terminów rezerwacji w BookingService — #29

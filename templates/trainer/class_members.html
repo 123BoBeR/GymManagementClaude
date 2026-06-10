@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Uczestnicy — {{ gym_class.name }} — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-people-fill me-2" style="color:#e94560"></i>Uczestnicy zajęć</h1>
+    <p>
+      <strong>{{ gym_class.name }}</strong> ·
+      {{ gym_class.schedule_day }}, {{ gym_class.schedule_time }}
+    </p>
+  </div>
+  <a href="/trainer/schedule" class="btn btn-sm btn-outline-secondary mt-1" style="border-radius:8px">
+    <i class="bi bi-arrow-left me-1"></i>Wróć do grafiku
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if bookings %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:32px">#</th>
+          <th>Imię i nazwisko</th>
+          <th>Telefon</th>
+          <th>Karnet</th>
+          <th>Status karnetu</th>
+          <th>Zapisano</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td class="ps-3 text-muted small">{{ loop.index }}</td>
+          <td><strong>{{ b.member.first_name }} {{ b.member.last_name }}</strong></td>
+          <td class="text-muted">{{ b.member.phone or '—' }}</td>
+          <td>
+            {% if b.member.subscription_type == 'monthly' %}
+              <span class="badge badge-monthly">Miesięczny</span>
+            {% elif b.member.subscription_type == 'annual' %}
+              <span class="badge badge-annual">Roczny</span>
+            {% else %}
+              <span class="badge badge-day">Dzienny</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if b.member.subscription_end and b.member.subscription_end >= today %}
+              <span class="badge bg-success">Aktywny</span>
+            {% else %}
+              <span class="badge bg-danger">Wygasły</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.82rem">
+            {{ b.booked_at.strftime('%d.%m.%Y %H:%M') if b.booked_at else '—' }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="px-3 py-2 border-top text-muted" style="font-size:.82rem">
+      Łącznie: <strong>{{ bookings|length }}</strong> / {{ gym_class.max_capacity }} miejsc
+    </div>
+    {% else %}
+    <p class="text-muted text-center py-5 mb-0">Nikt jeszcze nie jest zapisany na te zajęcia.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -13,12 +13,12 @@
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr>
-          <th class="ps-3">Dzień</th>
-          <th>Godzina</th>
+          <th class="ps-3">Godzina</th>
           <th>Zajęcia</th>
           <th>Opis</th>
           <th>Czas</th>
           <th>Miejsca</th>
+          <th></th>
           <th>Zapisy</th>
         </tr>
       </thead>
@@ -35,14 +35,19 @@
         {% endif %}
         {% set cnt = booking_counts[c.id] %}
         <tr>
-          <td class="ps-3 text-muted" style="font-size:.8rem">—</td>
-          <td class="fw-bold">{{ c.schedule_time }}</td>
+          <td class="ps-3 fw-bold">{{ c.schedule_time }}</td>
           <td class="fw-semibold">{{ c.name }}</td>
           <td class="text-muted" style="font-size:.82rem;max-width:220px">
             {{ c.description[:60] ~ '…' if c.description and c.description|length > 60 else c.description or '—' }}
           </td>
           <td class="text-muted">{{ c.duration_minutes }} min</td>
           <td class="text-muted">{{ c.max_capacity }}</td>
+          <td>
+            <a href="/trainer/classes/{{ c.id }}/members"
+               class="btn btn-sm btn-outline-primary me-2" title="Lista uczestników">
+              <i class="bi bi-people"></i>
+            </a>
+          </td>
           <td>
             <div class="d-flex align-items-center gap-2">
               <div class="progress" style="height:6px;width:60px">

@@ -2,12 +2,120 @@
 {% block title %}Zajęcia — GymApp{% endblock %}
 
 {% block content %}
-<div class="ph">
-  <h1><i class="bi bi-activity me-2" style="color:#e94560"></i>Zajęcia</h1>
-  <p>Dostępne zajęcia grupowe — zapisz się!</p>
+<div class="ph d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1><i class="bi bi-activity me-2" style="color:#e94560"></i>Zajęcia</h1>
+    <p>Dostępne zajęcia grupowe — zapisz się!</p>
+  </div>
+  <!-- Toggle widoku -->
+  <div class="btn-group mt-1" role="group">
+    <a href="?view=grid" class="btn btn-sm {% if view == 'grid' %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+       style="border-radius:8px 0 0 8px">
+      <i class="bi bi-grid-3x3-gap me-1"></i>Karty
+    </a>
+    <a href="?view=week" class="btn btn-sm {% if view == 'week' %}btn-secondary{% else %}btn-outline-secondary{% endif %}"
+       style="border-radius:0 8px 8px 0">
+      <i class="bi bi-calendar-week me-1"></i>Tydzień
+    </a>
+  </div>
 </div>
 
-{% if classes %}
+{% if not classes %}
+<div class="card">
+  <div class="card-body text-center py-5 text-muted">Brak dostępnych zajęć.</div>
+</div>
+
+{% elif view == 'week' %}
+<!-- ── Widok tygodniowy ──────────────────────────────────────────────────── -->
+{% set day_short = {
+  'Poniedziałek': 'Pon', 'Wtorek': 'Wt', 'Środa': 'Śr',
+  'Czwartek': 'Czw', 'Piątek': 'Pt', 'Sobota': 'Sob', 'Niedziela': 'Nd'
+} %}
+<div style="overflow-x:auto">
+  <div class="d-flex gap-2" style="min-width:700px">
+    {% for day in day_order %}
+    {% set day_classes = week[day] %}
+    <div style="flex:1;min-width:130px">
+      <!-- Nagłówek dnia -->
+      <div class="text-center fw-bold py-2 mb-2 rounded"
+           style="background:#f1f5f9;font-size:.82rem;color:#475569;
+                  text-transform:uppercase;letter-spacing:.5px">
+        {{ day_short[day] }}
+        <div style="font-size:.7rem;font-weight:400;color:#94a3b8">{{ day }}</div>
+      </div>
+
+      <!-- Zajęcia w tym dniu -->
+      {% if day_classes %}
+        {% for c in day_classes %}
+        {% set cnt = booking_counts[c.id] %}
+        {% set full = cnt >= c.max_capacity %}
+        {% set booked = c.id in booked_ids %}
+        {% set in_waitlist = c.id in waitlist_ids %}
+        {% set wpos = waitlist_pos.get(c.id) %}
+
+        <div class="card mb-2 {% if booked %}border-success{% elif in_waitlist %}border-warning{% endif %}"
+             style="border-width:2px!important">
+          <div class="card-body p-2">
+            <div class="fw-semibold mb-1" style="font-size:.78rem;line-height:1.3">
+              <a href="/client/classes/{{ c.id }}" class="text-decoration-none text-dark">
+                {{ c.name }}
+              </a>
+            </div>
+            <div class="text-muted mb-2" style="font-size:.73rem">
+              <i class="bi bi-clock me-1"></i>{{ c.schedule_time }}
+              · {{ c.duration_minutes }}min
+            </div>
+
+            <!-- Pasek zajętości -->
+            <div class="progress mb-2" style="height:4px;border-radius:3px">
+              <div class="progress-bar
+                {% if full %}bg-danger{% elif cnt >= c.max_capacity * 0.7 %}bg-warning{% else %}bg-success{% endif %}"
+                style="width:{{ [(cnt / c.max_capacity * 100)|int, 100]|min }}%">
+              </div>
+            </div>
+            <div class="text-muted mb-2" style="font-size:.7rem">{{ cnt }}/{{ c.max_capacity }}</div>
+
+            <!-- Przycisk -->
+            {% if booked %}
+              <button class="btn btn-success btn-sm w-100 py-0" disabled
+                      style="font-size:.7rem;border-radius:6px">
+                <i class="bi bi-check-lg"></i> Zapisany
+              </button>
+            {% elif in_waitlist %}
+              <form action="/client/classes/{{ c.id }}/waitlist/leave" method="POST">
+                <button type="submit" class="btn btn-warning btn-sm w-100 py-0 text-dark"
+                        style="font-size:.7rem;border-radius:6px">
+                  <i class="bi bi-x-circle"></i> Kolejka {{ wpos }}
+                </button>
+              </form>
+            {% elif full %}
+              <form action="/client/classes/{{ c.id }}/waitlist" method="POST">
+                <button type="submit" class="btn btn-sm w-100 py-0"
+                        style="background:#f59e0b;color:#fff;font-size:.7rem;border-radius:6px">
+                  <i class="bi bi-clock-history"></i> Kolejka
+                </button>
+              </form>
+            {% else %}
+              <form action="/client/classes/{{ c.id }}/book" method="POST">
+                <button type="submit" class="btn btn-sm w-100 py-0"
+                        style="background:#e94560;color:#fff;font-size:.7rem;border-radius:6px">
+                  <i class="bi bi-bookmark-plus"></i> Zapisz
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center text-muted py-3" style="font-size:.78rem">—</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<!-- ── Widok kart (domyślny) ────────────────────────────────────────────── -->
 <div class="row g-3">
   {% for c in classes %}
   {% set cnt = booking_counts[c.id] %}
@@ -25,7 +133,8 @@
       <div class="card-body d-flex flex-column">
 
         <div class="d-flex justify-content-between align-items-start mb-2">
-          <h6 class="fw-bold mb-0" style="font-size:.95rem">{{ c.name }}</h6>
+          <a href="/client/classes/{{ c.id }}" class="fw-bold mb-0 text-decoration-none text-dark"
+             style="font-size:.95rem">{{ c.name }}</a>
           {% if booked %}
             <span class="badge bg-success ms-2 flex-shrink-0"><i class="bi bi-check-lg"></i> Zapisany</span>
           {% elif in_waitlist %}
@@ -54,7 +163,6 @@
           </span>
         </div>
 
-        <!-- Pasek zajętości -->
         <div class="mb-2">
           <div class="d-flex justify-content-between mb-1" style="font-size:.78rem;color:#64748b">
             <span>Zajętość</span>
@@ -68,14 +176,12 @@
           </div>
         </div>
 
-        <!-- Info o kolejce -->
         {% if full and wcnt > 0 and not booked %}
           <div class="mb-2" style="font-size:.78rem;color:#92400e">
             <i class="bi bi-people-fill me-1"></i>{{ wcnt }} os. czeka w kolejce
           </div>
         {% endif %}
 
-        <!-- Przycisk akcji -->
         <div class="mt-auto pt-1">
           {% if booked %}
             <button class="btn btn-sm btn-outline-success w-100" disabled style="border-radius:8px">
@@ -113,10 +219,6 @@
     </div>
   </div>
   {% endfor %}
-</div>
-{% else %}
-<div class="card">
-  <div class="card-body text-center py-5 text-muted">Brak dostępnych zajęć.</div>
 </div>
 {% endif %}
 {% endblock %}

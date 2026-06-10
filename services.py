@@ -213,6 +213,18 @@ class BookingService:
                                    status="confirmed").first():
             return False, "Jesteś już zapisany na te zajęcia."
 
+        conflict = (Booking.query
+                    .join(GymClass, Booking.class_id == GymClass.id)
+                    .filter(
+                        Booking.member_id == member_id,
+                        Booking.status == "confirmed",
+                        GymClass.schedule_day == gym_class.schedule_day,
+                        GymClass.schedule_time == gym_class.schedule_time,
+                    ).first())
+        if conflict:
+            return False, (f"Masz już rezerwację w tym terminie "
+                           f"({gym_class.schedule_day} {gym_class.schedule_time}).")
+
         db.session.add(Booking(member_id=member_id, class_id=class_id, status="confirmed"))
         db.session.commit()
         return True, f"Zapisano na zajęcia: {gym_class.name}!"

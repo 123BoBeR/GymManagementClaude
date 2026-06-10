@@ -56,7 +56,10 @@
               <span style="font-size:.8rem;color:#64748b">{{ count }}/{{ c.max_capacity }}</span>
             </div>
           </td>
-          <td class="pe-3">
+          <td class="pe-3" style="white-space:nowrap">
+            <a href="/admin/classes/{{ c.id }}/members" class="btn btn-sm btn-outline-primary me-1" title="Lista uczestników">
+              <i class="bi bi-people"></i>
+            </a>
             <a href="/admin/classes/{{ c.id }}/edit" class="btn btn-sm btn-outline-secondary me-1">
               <i class="bi bi-pencil"></i>
             </a>

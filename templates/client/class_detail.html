@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ gym_class.name }} — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1 style="font-size:1.6rem">{{ gym_class.name }}</h1>
+    <p class="text-muted mb-0">
+      <i class="bi bi-person-badge me-1" style="color:#6366f1"></i>
+      {{ gym_class.trainer.first_name }} {{ gym_class.trainer.last_name }}
+      &nbsp;·&nbsp;
+      <i class="bi bi-calendar3 me-1" style="color:#e94560"></i>
+      {{ gym_class.schedule_day }}, {{ gym_class.schedule_time }}
+      &nbsp;·&nbsp;
+      <i class="bi bi-clock me-1" style="color:#f59e0b"></i>
+      {{ gym_class.duration_minutes }} min
+    </p>
+  </div>
+  <a href="/client/classes" class="btn btn-sm btn-outline-secondary mt-1" style="border-radius:8px">
+    <i class="bi bi-arrow-left me-1"></i>Wróć
+  </a>
+</div>
+
+<div class="row g-4">
+
+  <!-- Lewa kolumna: opis + zajętość -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">Opis zajęć</h6>
+        <p class="text-muted mb-0" style="line-height:1.7">
+          {{ gym_class.description or 'Brak opisu.' }}
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">Zajętość</h6>
+        <div class="d-flex justify-content-between mb-2" style="font-size:.88rem;color:#64748b">
+          <span>{{ cnt }} zapisanych</span>
+          <span>{{ gym_class.max_capacity }} miejsc max</span>
+        </div>
+        <div class="progress mb-2" style="height:10px;border-radius:6px">
+          <div class="progress-bar
+            {% if cnt >= gym_class.max_capacity %}bg-danger
+            {% elif cnt >= gym_class.max_capacity * 0.7 %}bg-warning
+            {% else %}bg-success{% endif %}"
+            style="width:{{ [(cnt / gym_class.max_capacity * 100)|int, 100]|min if gym_class.max_capacity else 0 }}%;border-radius:6px">
+          </div>
+        </div>
+        {% if cnt >= gym_class.max_capacity and wcnt > 0 %}
+          <p class="text-muted mb-0" style="font-size:.82rem">
+            <i class="bi bi-people-fill me-1"></i>{{ wcnt }} os. czeka w kolejce oczekujących
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Prawa kolumna: akcja -->
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-body">
+        <h6 class="fw-bold mb-3">Twój status</h6>
+
+        {% if booked %}
+          <div class="alert alert-success py-2 mb-3" style="font-size:.85rem">
+            <i class="bi bi-check-circle-fill me-1"></i>Jesteś zapisany na te zajęcia.
+          </div>
+          <button class="btn w-100 btn-outline-success" disabled style="border-radius:8px">
+            <i class="bi bi-check-lg me-1"></i>Zapisany
+          </button>
+        {% elif in_waitlist %}
+          <div class="alert alert-warning py-2 mb-3" style="font-size:.85rem">
+            <i class="bi bi-hourglass-split me-1"></i>Jesteś na liście oczekujących (pozycja {{ wpos }}).
+          </div>
+          <form action="/client/classes/{{ gym_class.id }}/waitlist/leave" method="POST">
+            <button type="submit" class="btn btn-outline-warning w-100" style="border-radius:8px">
+              <i class="bi bi-x-circle me-1"></i>Opuść kolejkę
+            </button>
+          </form>
+        {% elif cnt >= gym_class.max_capacity %}
+          <div class="alert alert-danger py-2 mb-3" style="font-size:.85rem">
+            <i class="bi bi-x-circle-fill me-1"></i>Brak wolnych miejsc.
+          </div>
+          <form action="/client/classes/{{ gym_class.id }}/waitlist" method="POST">
+            <button type="submit" class="btn w-100 fw-semibold"
+                    style="background:#f59e0b;color:#fff;border-radius:8px">
+              <i class="bi bi-clock-history me-1"></i>Dołącz do kolejki
+            </button>
+          </form>
+        {% else %}
+          <div class="alert alert-light py-2 mb-3" style="font-size:.85rem">
+            <i class="bi bi-door-open me-1"></i>Wolne miejsca: <strong>{{ gym_class.max_capacity - cnt }}</strong>
+          </div>
+          <form action="/client/classes/{{ gym_class.id }}/book" method="POST">
+            <button type="submit" class="btn w-100 fw-semibold"
+                    style="background:#e94560;color:#fff;border-radius:8px">
+              <i class="bi bi-bookmark-plus me-1"></i>Zapisz się
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
