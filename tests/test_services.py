@@ -1,8 +1,8 @@
-"""Testy serwisów MemberService i TrainerService."""
+"""Testy serwisów MemberService, TrainerService i UserService."""
 
 from datetime import date
 from models import db, User, Member, Trainer
-from services import MemberService, TrainerService
+from services import MemberService, TrainerService, UserService
 
 
 class TestMemberService:
@@ -102,3 +102,36 @@ class TestTrainerService:
         user_id = trainer.user_id
         TrainerService.delete(trainer)
         assert db.session.get(User, user_id) is None
+
+
+class TestUserService:
+
+    def test_change_password_success(self, seeded):
+        admin = seeded["admin"]
+        ok, msg = UserService.change_password(admin, "admin123", "nowe123", "nowe123")
+        assert ok is True
+        assert admin.check_password("nowe123")
+        assert "pomyślnie" in msg
+
+    def test_change_password_wrong_old_password(self, seeded):
+        admin = seeded["admin"]
+        ok, msg = UserService.change_password(admin, "zle_haslo", "nowe123", "nowe123")
+        assert ok is False
+        assert "nieprawidłowe" in msg
+
+    def test_change_password_too_short(self, seeded):
+        admin = seeded["admin"]
+        ok, msg = UserService.change_password(admin, "admin123", "abc", "abc")
+        assert ok is False
+        assert "6" in msg
+
+    def test_change_password_mismatch_confirm(self, seeded):
+        admin = seeded["admin"]
+        ok, msg = UserService.change_password(admin, "admin123", "nowe123", "inne456")
+        assert ok is False
+        assert "zgodne" in msg
+
+    def test_change_password_does_not_save_on_failure(self, seeded):
+        admin = seeded["admin"]
+        UserService.change_password(admin, "admin123", "abc", "abc")
+        assert admin.check_password("admin123")
