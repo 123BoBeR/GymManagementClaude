@@ -509,12 +509,20 @@ def trainer_members():
 def client_dashboard():
     user = db.session.get(User, session['user_id'])
     member = user.member
-    bookings = (Booking.query.filter_by(member_id=member.id, status='confirmed')
-                .order_by(Booking.booked_at.desc()).limit(5).all())
     subscription_active = MemberService.is_active(member)
     days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
-    return render_template('client/dashboard.html', member=member, bookings=bookings,
-                           subscription_active=subscription_active,
+
+    # Zajęcia w tym tygodniu (od dziś do niedzieli włącznie)
+    today_idx = date.today().weekday()  # 0=pon, 6=nd
+    confirmed = Booking.query.filter_by(member_id=member.id, status='confirmed').all()
+    upcoming = sorted(
+        [b for b in confirmed if DAY_ORDER.index(b.gym_class.schedule_day) >= today_idx
+         if b.gym_class.schedule_day in DAY_ORDER],
+        key=lambda b: (DAY_ORDER.index(b.gym_class.schedule_day), b.gym_class.schedule_time)
+    )
+
+    return render_template('client/dashboard.html', member=member,
+                           upcoming=upcoming, subscription_active=subscription_active,
                            days_left=days_left, today=date.today())
 
 
@@ -578,8 +586,15 @@ def client_waitlist_leave(id):
 def client_bookings():
     user = db.session.get(User, session['user_id'])
     member = user.member
-    bookings = Booking.query.filter_by(member_id=member.id).order_by(Booking.booked_at.desc()).all()
-    return render_template('client/bookings.html', member=member, bookings=bookings)
+    status_filter = request.args.get('status', 'active')
+    query = Booking.query.filter_by(member_id=member.id)
+    if status_filter == 'active':
+        query = query.filter_by(status='confirmed')
+    elif status_filter == 'cancelled':
+        query = query.filter_by(status='cancelled')
+    bookings = query.order_by(Booking.booked_at.desc()).all()
+    return render_template('client/bookings.html', member=member,
+                           bookings=bookings, status_filter=status_filter)
 
 
 @app.route('/client/bookings/<int:id>/cancel', methods=['POST'])

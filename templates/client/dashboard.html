@@ -89,47 +89,49 @@
     </div>
   </div>
 
-  <!-- Ostatnie rezerwacje -->
+  <!-- Zajęcia w tym tygodniu -->
   <div class="col-md-7">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5><i class="bi bi-bookmark-check me-2" style="color:#e94560"></i>Twoje rezerwacje</h5>
+        <h5><i class="bi bi-calendar-week me-2" style="color:#e94560"></i>Ten tydzień</h5>
         <a href="/client/bookings" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem">
-          Wszystkie
+          Wszystkie rezerwacje
         </a>
       </div>
       <div class="card-body p-0">
-        {% if bookings %}
+        {% if upcoming %}
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
               <th class="ps-3">Zajęcia</th>
               <th>Dzień</th>
               <th>Godz.</th>
-              <th>Status</th>
+              <th>Czas</th>
             </tr>
           </thead>
           <tbody>
-            {% for b in bookings %}
+            {% for b in upcoming %}
             <tr>
-              <td class="ps-3 fw-semibold">{{ b.gym_class.name }}</td>
-              <td class="text-muted" style="font-size:.82rem">{{ b.gym_class.schedule_day }}</td>
-              <td>{{ b.gym_class.schedule_time }}</td>
-              <td>
-                {% if b.status == 'confirmed' %}
-                  <span class="badge bg-success">Aktywna</span>
-                {% else %}
-                  <span class="badge bg-secondary">Anulowana</span>
-                {% endif %}
+              <td class="ps-3 fw-semibold">
+                <a href="/client/classes/{{ b.gym_class.id }}" class="text-decoration-none text-dark">
+                  {{ b.gym_class.name }}
+                </a>
               </td>
+              <td>
+                <span class="badge" style="background:#f1f5f9;color:#475569;font-weight:500">
+                  {{ b.gym_class.schedule_day }}
+                </span>
+              </td>
+              <td class="fw-semibold">{{ b.gym_class.schedule_time }}</td>
+              <td class="text-muted" style="font-size:.82rem">{{ b.gym_class.duration_minutes }} min</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
         {% else %}
         <div class="text-center py-4 text-muted" style="font-size:.88rem">
-          Brak rezerwacji.
-          <a href="/client/classes">Zapisz się na zajęcia →</a>
+          Brak zajęć do końca tygodnia.
+          <a href="/client/classes" class="d-block mt-1">Przeglądaj zajęcia →</a>
         </div>
         {% endif %}
       </div>

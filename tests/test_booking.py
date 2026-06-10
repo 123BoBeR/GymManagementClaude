@@ -92,3 +92,52 @@ class TestBookingService:
     def test_cancel_nonexistent_booking_rejected(self, seeded):
         ok, msg = BookingService.cancel(9999, seeded["member"].id)
         assert ok is False
+
+    def test_book_rejects_time_conflict(self, seeded):
+        member = seeded["member"]
+        trainer = seeded["trainer"]
+        gc1 = seeded["gym_class"]  # Poniedziałek 10:00
+
+        gc2 = GymClass(trainer_id=trainer.id, name="Yoga",
+                       max_capacity=10, schedule_day="Poniedziałek",
+                       schedule_time="10:00", duration_minutes=60)
+        db.session.add(gc2)
+        db.session.commit()
+
+        BookingService.book(member.id, gc1.id)
+        ok, msg = BookingService.book(member.id, gc2.id)
+
+        assert ok is False
+        assert "terminie" in msg
+
+    def test_book_allows_different_time(self, seeded):
+        member = seeded["member"]
+        trainer = seeded["trainer"]
+        gc1 = seeded["gym_class"]  # Poniedziałek 10:00
+
+        gc2 = GymClass(trainer_id=trainer.id, name="Yoga",
+                       max_capacity=10, schedule_day="Poniedziałek",
+                       schedule_time="12:00", duration_minutes=60)
+        db.session.add(gc2)
+        db.session.commit()
+
+        BookingService.book(member.id, gc1.id)
+        ok, msg = BookingService.book(member.id, gc2.id)
+
+        assert ok is True
+
+    def test_book_allows_same_time_different_day(self, seeded):
+        member = seeded["member"]
+        trainer = seeded["trainer"]
+        gc1 = seeded["gym_class"]  # Poniedziałek 10:00
+
+        gc2 = GymClass(trainer_id=trainer.id, name="Yoga",
+                       max_capacity=10, schedule_day="Wtorek",
+                       schedule_time="10:00", duration_minutes=60)
+        db.session.add(gc2)
+        db.session.commit()
+
+        BookingService.book(member.id, gc1.id)
+        ok, msg = BookingService.book(member.id, gc2.id)
+
+        assert ok is True
