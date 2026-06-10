@@ -1,7 +1,9 @@
 import csv
 import io
 import json
+import os
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, Response
+from dotenv import load_dotenv
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 from services import (BookingService, MemberService, TrainerService,
                       EquipmentService, SubscriptionFactory, PaymentService,
@@ -9,9 +11,11 @@ from services import (BookingService, MemberService, TrainerService,
 from functools import wraps
 from datetime import datetime, date
 
+load_dotenv()
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'gymapp-dev-secret-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///gym.db'
+app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///gym.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
