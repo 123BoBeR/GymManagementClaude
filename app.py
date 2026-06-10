@@ -1,5 +1,7 @@
+import csv
+import io
 import json
-from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, Response
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 from services import (BookingService, MemberService, TrainerService,
                       EquipmentService, SubscriptionFactory, PaymentService, WaitlistService)
@@ -183,6 +185,30 @@ def admin_member_edit(id):
         if ok:
             return redirect(url_for('admin_members'))
     return render_template('admin/member_form.html', member=member)
+
+
+@app.route('/admin/members/export')
+@role_required('admin')
+def admin_members_export():
+    members = Member.query.all()
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(['ID', 'Imię', 'Nazwisko', 'Login', 'Telefon',
+                'Typ karnetu', 'Wygasa', 'Status'])
+    for m in members:
+        active = 'Aktywny' if MemberService.is_active(m) else 'Nieaktywny'
+        sub_label = {'monthly': 'Miesięczny', 'annual': 'Roczny',
+                     'day_pass': 'Dzienny'}.get(m.subscription_type or '', '—')
+        w.writerow([m.id, m.first_name, m.last_name, m.user.username,
+                    m.phone or '', sub_label,
+                    m.subscription_end.strftime('%Y-%m-%d') if m.subscription_end else '',
+                    active])
+    buf.seek(0)
+    return Response(
+        buf.getvalue().encode('utf-8-sig'),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=klienci.csv'},
+    )
 
 
 @app.route('/admin/members/<int:id>/delete', methods=['POST'])
