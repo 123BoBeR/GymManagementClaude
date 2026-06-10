@@ -27,9 +27,8 @@
         {% for c in classes %}
         {% if c.schedule_day != current_day.val %}
           {% set current_day.val = c.schedule_day %}
-          <tr style="background:#f8fafc">
-            <td colspan="7" class="ps-3 fw-bold" style="font-size:.82rem;color:#475569;
-                text-transform:uppercase;letter-spacing:.5px;padding:.45rem 1rem">
+          <tr class="schedule-day-row">
+            <td colspan="7" class="ps-3 fw-bold schedule-day-label">
               {{ c.schedule_day }}
             </td>
           </tr>

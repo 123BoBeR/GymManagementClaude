@@ -165,10 +165,94 @@
       border-color: var(--border-card);
     }
 
+    /* ── Nadpisanie hardkodowanych inline kolorów w dark mode ────────────── */
+    /* Ciemny tekst */
+    [data-theme="dark"] [style*="color:#1e293b"],
+    [data-theme="dark"] [style*="color: #1e293b"] { color: var(--text-primary) !important; }
+
+    /* Wyciszony tekst */
+    [data-theme="dark"] [style*="color:#64748b"],
+    [data-theme="dark"] [style*="color: #64748b"],
+    [data-theme="dark"] [style*="color:#475569"],
+    [data-theme="dark"] [style*="color: #475569"] { color: var(--text-muted) !important; }
+
+    /* Jasne tło badge (#f1f5f9 → ciemny slate) */
+    [data-theme="dark"] [style*="background:#f1f5f9"] {
+      background: #334155 !important;
+      color: #cbd5e1 !important;
+    }
+    [data-theme="dark"] [style*="background: #f1f5f9"] {
+      background: #334155 !important;
+      color: #cbd5e1 !important;
+    }
+
+    /* Bootstrap utilities */
+    [data-theme="dark"] .text-muted  { color: var(--text-muted) !important; }
+    [data-theme="dark"] .text-dark   { color: var(--text-primary) !important; }
+
+    /* code w ciemnym motywie */
+    [data-theme="dark"] code {
+      background: rgba(255,255,255,.08);
+      color: #a5b4fc;
+      padding: .1em .35em;
+      border-radius: 4px;
+    }
+
+    /* Wiersz-separator w tabelach (np. nagłówek dnia w harmonogramie) */
+    [data-theme="dark"] tr[style*="background:#f8fafc"] {
+      background: #1e293b !important;
+    }
+    [data-theme="dark"] tr[style*="background: #f8fafc"] {
+      background: #1e293b !important;
+    }
+
+    /* dropdown i select */
+    [data-theme="dark"] .dropdown-menu {
+      background: var(--bg-card);
+      border-color: var(--border-card);
+    }
+    [data-theme="dark"] .dropdown-item {
+      color: var(--text-primary);
+    }
+    [data-theme="dark"] .dropdown-item:hover {
+      background: rgba(255,255,255,.08);
+    }
+
+    /* alert w dark mode */
+    [data-theme="dark"] .alert-warning {
+      background: rgba(217, 119, 6, .15);
+      border-color: rgba(217, 119, 6, .3);
+      color: #fcd34d;
+    }
+    [data-theme="dark"] .alert-danger {
+      background: rgba(185, 28, 28, .15);
+      border-color: rgba(185, 28, 28, .3);
+      color: #fca5a5;
+    }
+    [data-theme="dark"] .alert-success {
+      background: rgba(21, 128, 61, .15);
+      border-color: rgba(21, 128, 61, .3);
+      color: #86efac;
+    }
+    [data-theme="dark"] .alert-info {
+      background: rgba(29, 78, 216, .15);
+      border-color: rgba(29, 78, 216, .3);
+      color: #93c5fd;
+    }
+
     /* sub badges */
     .badge-monthly { background: #dbeafe; color: #1d4ed8; }
     .badge-annual  { background: #dcfce7; color: #15803d; }
     .badge-day     { background: #fef9c3; color: #92400e; }
+
+    /* harmonogram - wiersz dnia */
+    .schedule-day-row { background: #f8fafc; }
+    .schedule-day-label {
+      font-size: .82rem; color: #475569;
+      text-transform: uppercase; letter-spacing: .5px; padding: .45rem 1rem;
+    }
+    [data-theme="dark"] .schedule-day-row { background: #1e293b; }
+    [data-theme="dark"] .schedule-day-label { color: #94a3b8; }
 
     /* eq status */
     .eq-working     { background: #dcfce7; color: #15803d; }
