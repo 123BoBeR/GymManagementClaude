@@ -7,6 +7,36 @@
   <p>Witaj, {{ member.first_name }}! Oto Twoje podsumowanie.</p>
 </div>
 
+{% if days_left is not none %}
+  {% if days_left < 0 %}
+  <div class="alert d-flex align-items-center gap-3 mb-4 py-3"
+       style="background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;color:#991b1b">
+    <i class="bi bi-x-octagon-fill fs-4 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+      <strong>Karnet wygasł!</strong>
+      Twój karnet stracił ważność. Opłać go, żeby dalej korzystać z siłowni.
+    </div>
+    <a href="/client/payments" class="btn btn-sm"
+       style="background:#991b1b;color:#fff;border-radius:8px;white-space:nowrap">
+      <i class="bi bi-credit-card me-1"></i>Opłać teraz
+    </a>
+  </div>
+  {% elif days_left <= 7 %}
+  <div class="alert d-flex align-items-center gap-3 mb-4 py-3"
+       style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;color:#92400e">
+    <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+      <strong>Karnet wygasa za {{ days_left }} {% if days_left == 1 %}dzień{% else %}dni{% endif %}!</strong>
+      Pamiętaj o odnowieniu, żeby nie stracić dostępu.
+    </div>
+    <a href="/client/payments" class="btn btn-sm"
+       style="background:#92400e;color:#fff;border-radius:8px;white-space:nowrap">
+      <i class="bi bi-credit-card me-1"></i>Przedłuż
+    </a>
+  </div>
+  {% endif %}
+{% endif %}
+
 <div class="row g-3 mb-4">
   <!-- Karnet -->
   <div class="col-md-5">
