@@ -277,6 +277,24 @@ class WaitlistService:
         return None
 
 
+class UserService:
+    """Serwis zarządzania kontami użytkowników."""
+
+    @staticmethod
+    def change_password(user: User, old_password: str,
+                        new_password: str, confirm: str) -> tuple[bool, str]:
+        """Zmienia hasło użytkownika po weryfikacji starego."""
+        if not user.check_password(old_password):
+            return False, "Stare hasło jest nieprawidłowe."
+        if len(new_password) < 6:
+            return False, "Nowe hasło musi mieć co najmniej 6 znaków."
+        if new_password != confirm:
+            return False, "Nowe hasła nie są zgodne."
+        user.set_password(new_password)
+        db.session.commit()
+        return True, "Hasło zmienione pomyślnie."
+
+
 class MemberService:
     """Serwis obsługi klientów siłowni."""
 

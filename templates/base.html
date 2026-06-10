@@ -162,11 +162,54 @@
   </nav>
 
   <div class="sb-footer">
+    {% if session.role != 'client' %}
+    <button type="button" class="btn btn-sm w-100 mb-2" data-bs-toggle="modal" data-bs-target="#pwdModal"
+            style="background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:none;font-size:.82rem">
+      <i class="bi bi-key-fill me-1"></i>Zmień hasło
+    </button>
+    {% endif %}
     <a href="/logout" class="btn btn-sm w-100"
        style="background:rgba(255,255,255,.08);color:#fff;border:none">
       <i class="bi bi-box-arrow-right"></i> Wyloguj
     </a>
   </div>
+</div>
+
+<!-- Modal zmiany hasła (admin/trener) -->
+{% if session.role != 'client' %}
+<div class="modal fade" id="pwdModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold"><i class="bi bi-key-fill me-2"></i>Zmień hasło</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/{% if session.role == 'admin' %}admin{% else %}trainer{% endif %}/profile/change-password" method="POST">
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label" style="font-size:.82rem;font-weight:600">Stare hasło</label>
+            <input type="password" name="old_password" class="form-control form-control-sm" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" style="font-size:.82rem;font-weight:600">Nowe hasło</label>
+            <input type="password" name="new_password" class="form-control form-control-sm" minlength="6" required>
+          </div>
+          <div class="mb-0">
+            <label class="form-label" style="font-size:.82rem;font-weight:600">Potwierdź hasło</label>
+            <input type="password" name="confirm_password" class="form-control form-control-sm" minlength="6" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-sm" style="background:#e94560;color:#fff">
+            <i class="bi bi-check-lg me-1"></i>Zmień
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 </div>
 
 <div class="main">

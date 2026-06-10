@@ -4,7 +4,8 @@ import json
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify, Response
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 from services import (BookingService, MemberService, TrainerService,
-                      EquipmentService, SubscriptionFactory, PaymentService, WaitlistService)
+                      EquipmentService, SubscriptionFactory, PaymentService,
+                      WaitlistService, UserService)
 from functools import wraps
 from datetime import datetime, date
 
@@ -511,6 +512,48 @@ def client_profile():
     days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
     return render_template('client/profile.html', member=member, today=date.today(),
                            bookings_count=bookings_count, days_left=days_left)
+
+
+@app.route('/client/profile/change-password', methods=['POST'])
+@role_required('client')
+def client_change_password():
+    user = db.session.get(User, session['user_id'])
+    ok, msg = UserService.change_password(
+        user,
+        request.form.get('old_password', ''),
+        request.form.get('new_password', ''),
+        request.form.get('confirm_password', ''),
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client_profile'))
+
+
+@app.route('/trainer/profile/change-password', methods=['POST'])
+@role_required('trainer')
+def trainer_change_password():
+    user = db.session.get(User, session['user_id'])
+    ok, msg = UserService.change_password(
+        user,
+        request.form.get('old_password', ''),
+        request.form.get('new_password', ''),
+        request.form.get('confirm_password', ''),
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('trainer_dashboard'))
+
+
+@app.route('/admin/profile/change-password', methods=['POST'])
+@role_required('admin')
+def admin_change_password():
+    user = db.session.get(User, session['user_id'])
+    ok, msg = UserService.change_password(
+        user,
+        request.form.get('old_password', ''),
+        request.form.get('new_password', ''),
+        request.form.get('confirm_password', ''),
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('admin_dashboard'))
 
 
 # ── Client — płatności ───────────────────────────────────────────────────────
