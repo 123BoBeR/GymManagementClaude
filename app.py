@@ -1,8 +1,8 @@
 import json
 from flask import Flask, render_template, redirect, url_for, request, session, flash, jsonify
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
+from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 from services import (BookingService, MemberService, TrainerService,
-                      EquipmentService, SubscriptionFactory, PaymentService)
+                      EquipmentService, SubscriptionFactory, PaymentService, WaitlistService)
 from functools import wraps
 from datetime import datetime, date
 
@@ -422,8 +422,13 @@ def client_classes():
                   Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
     booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count()
                       for c in classes}
+    waitlist_ids = {w.class_id for w in Waitlist.query.filter_by(member_id=member.id).all()}
+    waitlist_pos = {cid: WaitlistService.position(member.id, cid) for cid in waitlist_ids}
+    waitlist_counts = {c.id: Waitlist.query.filter_by(class_id=c.id).count() for c in classes}
     return render_template('client/classes.html', classes=classes,
-                           booked_ids=booked_ids, booking_counts=booking_counts)
+                           booked_ids=booked_ids, booking_counts=booking_counts,
+                           waitlist_ids=waitlist_ids, waitlist_pos=waitlist_pos,
+                           waitlist_counts=waitlist_counts)
 
 
 @app.route('/client/classes/<int:id>/book', methods=['POST'])
@@ -433,6 +438,24 @@ def client_book(id):
     ok, msg = BookingService.book(user.member.id, id)
     flash(msg, 'success' if ok else 'danger')
     return redirect(url_for('client_bookings') if ok else url_for('client_classes'))
+
+
+@app.route('/client/classes/<int:id>/waitlist', methods=['POST'])
+@role_required('client')
+def client_waitlist_join(id):
+    user = db.session.get(User, session['user_id'])
+    ok, msg = WaitlistService.join(user.member.id, id)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client_classes'))
+
+
+@app.route('/client/classes/<int:id>/waitlist/leave', methods=['POST'])
+@role_required('client')
+def client_waitlist_leave(id):
+    user = db.session.get(User, session['user_id'])
+    ok, msg = WaitlistService.leave(user.member.id, id)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client_classes'))
 
 
 @app.route('/client/bookings')

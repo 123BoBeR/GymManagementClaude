@@ -14,7 +14,7 @@ import random
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timedelta
 
-from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment
+from models import db, User, Member, Trainer, GymClass, Booking, Equipment, Payment, Waitlist
 
 
 _PL_MONTHS = {
@@ -30,6 +30,46 @@ SUBSCRIPTION_PRICES: dict[str, float] = {
     "annual":  799.0,
     "day_pass": 29.0,
 }
+
+
+# ── Observer Pattern: obserwatorzy zdarzeń rezerwacji ────────────────────────
+
+class BookingObserver(ABC):
+    """
+    Abstrakcyjny obserwator zdarzeń rezerwacji.
+    Implementacje reagują na anulowanie i potwierdzenie rezerwacji.
+    """
+
+    @abstractmethod
+    def on_cancelled(self, booking: Booking) -> None:
+        """Wywoływany gdy rezerwacja zostaje anulowana."""
+
+    def on_confirmed(self, booking: Booking) -> None:
+        """Wywoływany gdy rezerwacja zostaje potwierdzona. Domyślnie brak akcji."""
+
+
+class WaitlistObserver(BookingObserver):
+    """
+    Obserwator listy oczekujących.
+    Po anulowaniu rezerwacji automatycznie przydziela wolne miejsce
+    pierwszej osobie z kolejki oczekujących na te zajęcia.
+    """
+
+    def on_cancelled(self, booking: Booking) -> None:
+        next_entry = (Waitlist.query
+                      .filter_by(class_id=booking.class_id)
+                      .order_by(Waitlist.added_at)
+                      .first())
+        if next_entry is None:
+            return
+        new_booking = Booking(
+            member_id=next_entry.member_id,
+            class_id=next_entry.class_id,
+            status='confirmed',
+        )
+        db.session.add(new_booking)
+        db.session.delete(next_entry)
+        db.session.commit()
 
 
 # ── Strategy Pattern: strategie typów karnetów ───────────────────────────────
@@ -140,7 +180,23 @@ class SubscriptionFactory:
 # ── Service Layer ─────────────────────────────────────────────────────────────
 
 class BookingService:
-    """Serwis obsługi rezerwacji zajęć grupowych."""
+    """
+    Serwis obsługi rezerwacji zajęć grupowych.
+    Wspiera wzorzec Observer — lista obserwatorów jest powiadamiana
+    o zmianach statusu rezerwacji.
+    """
+
+    _observers: list[BookingObserver] = [WaitlistObserver()]
+
+    @classmethod
+    def _notify_cancelled(cls, booking: Booking) -> None:
+        for obs in cls._observers:
+            obs.on_cancelled(booking)
+
+    @classmethod
+    def _notify_confirmed(cls, booking: Booking) -> None:
+        for obs in cls._observers:
+            obs.on_confirmed(booking)
 
     @staticmethod
     def book(member_id: int, class_id: int) -> tuple[bool, str]:
@@ -161,9 +217,9 @@ class BookingService:
         db.session.commit()
         return True, f"Zapisano na zajęcia: {gym_class.name}!"
 
-    @staticmethod
-    def cancel(booking_id: int, member_id: int) -> tuple[bool, str]:
-        """Anuluje rezerwację. Zwraca (sukces, komunikat)."""
+    @classmethod
+    def cancel(cls, booking_id: int, member_id: int) -> tuple[bool, str]:
+        """Anuluje rezerwację i powiadamia obserwatorów. Zwraca (sukces, komunikat)."""
         booking = db.session.get(Booking, booking_id)
         if booking is None:
             return False, "Rezerwacja nie istnieje."
@@ -174,7 +230,51 @@ class BookingService:
 
         booking.status = "cancelled"
         db.session.commit()
+        cls._notify_cancelled(booking)
         return True, "Rezerwacja anulowana."
+
+
+class WaitlistService:
+    """Serwis zarządzania listą oczekujących na zajęcia."""
+
+    @staticmethod
+    def join(member_id: int, class_id: int) -> tuple[bool, str]:
+        """Dołącza klienta do kolejki oczekujących. Zwraca (sukces, komunikat)."""
+        gym_class = db.session.get(GymClass, class_id)
+        if gym_class is None:
+            return False, "Zajęcia nie istnieją."
+
+        if Booking.query.filter_by(member_id=member_id, class_id=class_id,
+                                   status="confirmed").first():
+            return False, "Masz już aktywną rezerwację na te zajęcia."
+
+        if Waitlist.query.filter_by(member_id=member_id, class_id=class_id).first():
+            return False, "Jesteś już na liście oczekujących."
+
+        db.session.add(Waitlist(member_id=member_id, class_id=class_id))
+        db.session.commit()
+        pos = Waitlist.query.filter_by(class_id=class_id).count()
+        return True, f"Dodano do kolejki oczekujących (pozycja {pos})."
+
+    @staticmethod
+    def leave(member_id: int, class_id: int) -> tuple[bool, str]:
+        """Usuwa klienta z listy oczekujących."""
+        entry = Waitlist.query.filter_by(member_id=member_id, class_id=class_id).first()
+        if not entry:
+            return False, "Nie ma Cię na liście oczekujących."
+        db.session.delete(entry)
+        db.session.commit()
+        return True, "Usunięto z listy oczekujących."
+
+    @staticmethod
+    def position(member_id: int, class_id: int) -> int | None:
+        """Zwraca pozycję klienta w kolejce lub None."""
+        entries = (Waitlist.query.filter_by(class_id=class_id)
+                   .order_by(Waitlist.added_at).all())
+        for i, e in enumerate(entries, start=1):
+            if e.member_id == member_id:
+                return i
+        return None
 
 
 class MemberService:

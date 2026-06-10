@@ -72,6 +72,14 @@ class Booking(db.Model):
     status = db.Column(db.String(20), default='confirmed')  # confirmed | cancelled
 
 
+class Waitlist(db.Model):
+    __tablename__ = 'waitlist'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
+    class_id = db.Column(db.Integer, db.ForeignKey('gym_classes.id'), nullable=False)
+    added_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
