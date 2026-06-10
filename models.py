@@ -45,7 +45,7 @@ class Trainer(db.Model):
     specialization = db.Column(db.String(100))
     hourly_rate = db.Column(db.Float)
 
-    classes = db.relationship('GymClass', backref='trainer')
+    classes = db.relationship('GymClass', backref='trainer', cascade='all, delete-orphan')
 
 
 class GymClass(db.Model):

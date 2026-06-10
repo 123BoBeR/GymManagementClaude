@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edytuj trenera' if trainer else 'Nowy trener' }} — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1>
+    <i class="bi bi-person-badge-fill me-2" style="color:#e94560"></i>
+    {{ 'Edytuj trenera' if trainer else 'Nowy trener' }}
+  </h1>
+  <p>{{ 'Zmień dane trenera' if trainer else 'Dodaj nowego trenera do systemu' }}</p>
+</div>
+
+<div class="card" style="max-width:600px">
+  <div class="card-body p-4">
+    <form method="POST">
+
+      {% if not trainer %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nazwa użytkownika</label>
+        <input type="text" name="username" class="form-control" required
+               placeholder="np. anna.nowak">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Hasło</label>
+        <input type="password" name="password" class="form-control" required placeholder="••••••••">
+      </div>
+      <hr class="my-3">
+      {% endif %}
+
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">Imię</label>
+          <input type="text" name="first_name" class="form-control" required
+                 value="{{ trainer.first_name if trainer else '' }}">
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Nazwisko</label>
+          <input type="text" name="last_name" class="form-control" required
+                 value="{{ trainer.last_name if trainer else '' }}">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Specjalizacja</label>
+        <input type="text" name="specialization" class="form-control"
+               value="{{ trainer.specialization if trainer else '' }}"
+               placeholder="np. Trening siłowy i kulturystyka">
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Stawka godzinowa (zł)</label>
+        <input type="number" name="hourly_rate" class="form-control" min="0" step="5"
+               value="{{ trainer.hourly_rate | int if trainer and trainer.hourly_rate else '' }}"
+               placeholder="np. 120">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn"
+                style="background:#e94560;color:#fff;border-radius:8px;font-weight:600">
+          <i class="bi bi-check-lg me-1"></i>
+          {{ 'Zapisz zmiany' if trainer else 'Dodaj trenera' }}
+        </button>
+        <a href="/admin/trainers" class="btn btn-outline-secondary" style="border-radius:8px">Anuluj</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

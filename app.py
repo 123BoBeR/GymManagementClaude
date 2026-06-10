@@ -1,5 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, session, flash
 from models import db, User, Member, Trainer, GymClass, Booking, Equipment
+from services import (BookingService, MemberService, TrainerService,
+                      EquipmentService, SubscriptionFactory)
 from functools import wraps
 from datetime import datetime, date
 
@@ -75,7 +77,7 @@ def logout():
     return redirect(url_for('login'))
 
 
-# ── Admin ────────────────────────────────────────────────────────────────────
+# ── Admin — klienci ──────────────────────────────────────────────────────────
 
 @app.route('/admin/')
 @role_required('admin')
@@ -101,31 +103,21 @@ def admin_members():
 @role_required('admin')
 def admin_member_new():
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        if User.query.filter_by(username=username).first():
-            flash('Nazwa użytkownika już istnieje.', 'danger')
-            return render_template('admin/member_form.html', member=None)
-
-        user = User(username=username, role='client')
-        user.set_password(request.form.get('password', ''))
-        db.session.add(user)
-        db.session.flush()
-
         sub_end_str = request.form.get('subscription_end', '')
         sub_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date() if sub_end_str else None
 
-        member = Member(
-            user_id=user.id,
+        ok, msg = MemberService.create(
+            username=request.form.get('username', '').strip(),
+            password=request.form.get('password', ''),
             first_name=request.form.get('first_name', ''),
             last_name=request.form.get('last_name', ''),
             phone=request.form.get('phone', ''),
-            subscription_type=request.form.get('subscription_type', 'monthly'),
-            subscription_end=sub_end,
+            sub_type=request.form.get('subscription_type', 'monthly'),
+            sub_end=sub_end,
         )
-        db.session.add(member)
-        db.session.commit()
-        flash('Klient dodany pomyślnie.', 'success')
-        return redirect(url_for('admin_members'))
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
+            return redirect(url_for('admin_members'))
     return render_template('admin/member_form.html', member=None)
 
 
@@ -134,16 +126,20 @@ def admin_member_new():
 def admin_member_edit(id):
     member = Member.query.get_or_404(id)
     if request.method == 'POST':
-        member.first_name = request.form.get('first_name', member.first_name)
-        member.last_name = request.form.get('last_name', member.last_name)
-        member.phone = request.form.get('phone', member.phone)
-        member.subscription_type = request.form.get('subscription_type', member.subscription_type)
         sub_end_str = request.form.get('subscription_end', '')
-        if sub_end_str:
-            member.subscription_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date()
-        db.session.commit()
-        flash('Dane zaktualizowane.', 'success')
-        return redirect(url_for('admin_members'))
+        sub_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date() if sub_end_str else None
+
+        ok, msg = MemberService.update(
+            member=member,
+            first_name=request.form.get('first_name', member.first_name),
+            last_name=request.form.get('last_name', member.last_name),
+            phone=request.form.get('phone', member.phone),
+            sub_type=request.form.get('subscription_type', member.subscription_type),
+            sub_end=sub_end,
+        )
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
+            return redirect(url_for('admin_members'))
     return render_template('admin/member_form.html', member=member)
 
 
@@ -151,11 +147,12 @@ def admin_member_edit(id):
 @role_required('admin')
 def admin_member_delete(id):
     member = Member.query.get_or_404(id)
-    db.session.delete(member.user)  # cascade → member → bookings
-    db.session.commit()
-    flash('Klient usunięty.', 'success')
+    _, msg = MemberService.delete(member)
+    flash(msg, 'success')
     return redirect(url_for('admin_members'))
 
+
+# ── Admin — trenerzy ─────────────────────────────────────────────────────────
 
 @app.route('/admin/trainers')
 @role_required('admin')
@@ -164,14 +161,64 @@ def admin_trainers():
     return render_template('admin/trainers.html', trainers=trainers)
 
 
+@app.route('/admin/trainers/new', methods=['GET', 'POST'])
+@role_required('admin')
+def admin_trainer_new():
+    if request.method == 'POST':
+        ok, msg = TrainerService.create(
+            username=request.form.get('username', '').strip(),
+            password=request.form.get('password', ''),
+            first_name=request.form.get('first_name', ''),
+            last_name=request.form.get('last_name', ''),
+            specialization=request.form.get('specialization', ''),
+            hourly_rate=float(request.form.get('hourly_rate') or 0),
+        )
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
+            return redirect(url_for('admin_trainers'))
+    return render_template('admin/trainer_form.html', trainer=None)
+
+
+@app.route('/admin/trainers/<int:id>/edit', methods=['GET', 'POST'])
+@role_required('admin')
+def admin_trainer_edit(id):
+    trainer = Trainer.query.get_or_404(id)
+    if request.method == 'POST':
+        ok, msg = TrainerService.update(
+            trainer=trainer,
+            first_name=request.form.get('first_name', trainer.first_name),
+            last_name=request.form.get('last_name', trainer.last_name),
+            specialization=request.form.get('specialization', trainer.specialization),
+            hourly_rate=float(request.form.get('hourly_rate') or 0),
+        )
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
+            return redirect(url_for('admin_trainers'))
+    return render_template('admin/trainer_form.html', trainer=trainer)
+
+
+@app.route('/admin/trainers/<int:id>/delete', methods=['POST'])
+@role_required('admin')
+def admin_trainer_delete(id):
+    trainer = Trainer.query.get_or_404(id)
+    _, msg = TrainerService.delete(trainer)
+    flash(msg, 'success')
+    return redirect(url_for('admin_trainers'))
+
+
+# ── Admin — zajęcia ──────────────────────────────────────────────────────────
+
 @app.route('/admin/classes')
 @role_required('admin')
 def admin_classes():
     classes = sorted(GymClass.query.all(),
-                     key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
+                     key=lambda c: (DAY_ORDER.index(c.schedule_day)
+                                    if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
     trainers = Trainer.query.all()
-    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count() for c in classes}
-    return render_template('admin/classes.html', classes=classes, trainers=trainers, booking_counts=booking_counts)
+    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count()
+                      for c in classes}
+    return render_template('admin/classes.html', classes=classes, trainers=trainers,
+                           booking_counts=booking_counts)
 
 
 @app.route('/admin/classes/new', methods=['POST'])
@@ -196,17 +243,63 @@ def admin_class_new():
 @role_required('admin')
 def admin_class_delete(id):
     gym_class = GymClass.query.get_or_404(id)
-    db.session.delete(gym_class)  # cascade → bookings
+    db.session.delete(gym_class)
     db.session.commit()
     flash('Zajęcia usunięte.', 'success')
     return redirect(url_for('admin_classes'))
 
+
+# ── Admin — sprzęt ───────────────────────────────────────────────────────────
 
 @app.route('/admin/equipment')
 @role_required('admin')
 def admin_equipment():
     equipment = Equipment.query.all()
     return render_template('admin/equipment.html', equipment=equipment)
+
+
+@app.route('/admin/equipment/new', methods=['POST'])
+@role_required('admin')
+def admin_equipment_new():
+    pd_str = request.form.get('purchase_date', '')
+    purchase_date = datetime.strptime(pd_str, '%Y-%m-%d').date() if pd_str else None
+    ok, msg = EquipmentService.create(
+        name=request.form.get('name', ''),
+        category=request.form.get('category', ''),
+        status=request.form.get('status', 'working'),
+        purchase_date=purchase_date,
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('admin_equipment'))
+
+
+@app.route('/admin/equipment/<int:id>/edit', methods=['GET', 'POST'])
+@role_required('admin')
+def admin_equipment_edit(id):
+    equipment = Equipment.query.get_or_404(id)
+    if request.method == 'POST':
+        pd_str = request.form.get('purchase_date', '')
+        purchase_date = datetime.strptime(pd_str, '%Y-%m-%d').date() if pd_str else None
+        ok, msg = EquipmentService.update(
+            equipment=equipment,
+            name=request.form.get('name', equipment.name),
+            category=request.form.get('category', equipment.category),
+            status=request.form.get('status', equipment.status),
+            purchase_date=purchase_date,
+        )
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
+            return redirect(url_for('admin_equipment'))
+    return render_template('admin/equipment_form.html', equipment=equipment)
+
+
+@app.route('/admin/equipment/<int:id>/delete', methods=['POST'])
+@role_required('admin')
+def admin_equipment_delete(id):
+    equipment = Equipment.query.get_or_404(id)
+    _, msg = EquipmentService.delete(equipment)
+    flash(msg, 'success')
+    return redirect(url_for('admin_equipment'))
 
 
 # ── Trainer ──────────────────────────────────────────────────────────────────
@@ -222,11 +315,10 @@ def trainer_dashboard():
     }
     today_pl = days_pl.get(datetime.now().strftime('%A'), '')
     today_classes = [c for c in trainer.classes if c.schedule_day == today_pl]
-    total_members = len({b.member_id for c in trainer.classes for b in c.bookings if b.status == 'confirmed'})
-    return render_template('trainer/dashboard.html',
-                           trainer=trainer,
-                           today_classes=today_classes,
-                           today_name=today_pl,
+    total_members = len({b.member_id for c in trainer.classes
+                         for b in c.bookings if b.status == 'confirmed'})
+    return render_template('trainer/dashboard.html', trainer=trainer,
+                           today_classes=today_classes, today_name=today_pl,
                            total_members=total_members)
 
 
@@ -236,9 +328,12 @@ def trainer_schedule():
     user = db.session.get(User, session['user_id'])
     trainer = user.trainer
     classes = sorted(trainer.classes,
-                     key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
-    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count() for c in classes}
-    return render_template('trainer/schedule.html', trainer=trainer, classes=classes, booking_counts=booking_counts)
+                     key=lambda c: (DAY_ORDER.index(c.schedule_day)
+                                    if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
+    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count()
+                      for c in classes}
+    return render_template('trainer/schedule.html', trainer=trainer,
+                           classes=classes, booking_counts=booking_counts)
 
 
 @app.route('/trainer/members')
@@ -253,7 +348,8 @@ def trainer_members():
                 if b.member_id not in members_dict:
                     members_dict[b.member_id] = {'member': b.member, 'classes': []}
                 members_dict[b.member_id]['classes'].append(c.name)
-    return render_template('trainer/members.html', trainer=trainer, members_data=list(members_dict.values()), today=date.today())
+    return render_template('trainer/members.html', trainer=trainer,
+                           members_data=list(members_dict.values()), today=date.today())
 
 
 # ── Client ───────────────────────────────────────────────────────────────────
@@ -265,14 +361,11 @@ def client_dashboard():
     member = user.member
     bookings = (Booking.query.filter_by(member_id=member.id, status='confirmed')
                 .order_by(Booking.booked_at.desc()).limit(5).all())
-    subscription_active = (member.subscription_end is not None and member.subscription_end >= date.today())
+    subscription_active = MemberService.is_active(member)
     days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
-    return render_template('client/dashboard.html',
-                           member=member,
-                           bookings=bookings,
+    return render_template('client/dashboard.html', member=member, bookings=bookings,
                            subscription_active=subscription_active,
-                           days_left=days_left,
-                           today=date.today())
+                           days_left=days_left, today=date.today())
 
 
 @app.route('/client/classes')
@@ -281,32 +374,23 @@ def client_classes():
     user = db.session.get(User, session['user_id'])
     member = user.member
     classes = sorted(GymClass.query.all(),
-                     key=lambda c: (DAY_ORDER.index(c.schedule_day) if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
-    booked_ids = {b.class_id for b in Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
-    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count() for c in classes}
-    return render_template('client/classes.html', classes=classes, booked_ids=booked_ids, booking_counts=booking_counts)
+                     key=lambda c: (DAY_ORDER.index(c.schedule_day)
+                                    if c.schedule_day in DAY_ORDER else 99, c.schedule_time))
+    booked_ids = {b.class_id for b in
+                  Booking.query.filter_by(member_id=member.id, status='confirmed').all()}
+    booking_counts = {c.id: Booking.query.filter_by(class_id=c.id, status='confirmed').count()
+                      for c in classes}
+    return render_template('client/classes.html', classes=classes,
+                           booked_ids=booked_ids, booking_counts=booking_counts)
 
 
 @app.route('/client/classes/<int:id>/book', methods=['POST'])
 @role_required('client')
 def client_book(id):
     user = db.session.get(User, session['user_id'])
-    member = user.member
-    gym_class = GymClass.query.get_or_404(id)
-
-    confirmed = Booking.query.filter_by(class_id=id, status='confirmed').count()
-    if confirmed >= gym_class.max_capacity:
-        flash('Brak wolnych miejsc na te zajęcia.', 'danger')
-        return redirect(url_for('client_classes'))
-
-    if Booking.query.filter_by(member_id=member.id, class_id=id, status='confirmed').first():
-        flash('Jesteś już zapisany na te zajęcia.', 'warning')
-        return redirect(url_for('client_classes'))
-
-    db.session.add(Booking(member_id=member.id, class_id=id, status='confirmed'))
-    db.session.commit()
-    flash(f'Zapisano na: {gym_class.name}!', 'success')
-    return redirect(url_for('client_bookings'))
+    ok, msg = BookingService.book(user.member.id, id)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client_bookings') if ok else url_for('client_classes'))
 
 
 @app.route('/client/bookings')
@@ -321,14 +405,9 @@ def client_bookings():
 @app.route('/client/bookings/<int:id>/cancel', methods=['POST'])
 @role_required('client')
 def client_cancel(id):
-    booking = Booking.query.get_or_404(id)
     user = db.session.get(User, session['user_id'])
-    if booking.member_id != user.member.id:
-        flash('Brak dostępu.', 'danger')
-        return redirect(url_for('client_bookings'))
-    booking.status = 'cancelled'
-    db.session.commit()
-    flash('Rezerwacja anulowana.', 'success')
+    ok, msg = BookingService.cancel(id, user.member.id)
+    flash(msg, 'success' if ok else 'danger')
     return redirect(url_for('client_bookings'))
 
 

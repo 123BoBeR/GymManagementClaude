@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Edytuj sprzęt — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-tools me-2" style="color:#e94560"></i>Edytuj sprzęt</h1>
+  <p>Zmień dane wyposażenia siłowni</p>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-body p-4">
+    <form method="POST">
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Nazwa sprzętu</label>
+        <input type="text" name="name" class="form-control" required
+               value="{{ equipment.name }}">
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col">
+          <label class="form-label fw-semibold">Kategoria</label>
+          <input type="text" name="category" class="form-control"
+                 value="{{ equipment.category or '' }}">
+        </div>
+        <div class="col">
+          <label class="form-label fw-semibold">Stan</label>
+          <select name="status" class="form-select">
+            <option value="working"     {% if equipment.status == 'working'     %}selected{% endif %}>Sprawny</option>
+            <option value="maintenance" {% if equipment.status == 'maintenance' %}selected{% endif %}>Serwis</option>
+            <option value="broken"      {% if equipment.status == 'broken'      %}selected{% endif %}>Uszkodzony</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Data zakupu</label>
+        <input type="date" name="purchase_date" class="form-control"
+               value="{{ equipment.purchase_date.strftime('%Y-%m-%d') if equipment.purchase_date else '' }}">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn"
+                style="background:#e94560;color:#fff;border-radius:8px;font-weight:600">
+          <i class="bi bi-check-lg me-1"></i> Zapisz zmiany
+        </button>
+        <a href="/admin/equipment" class="btn btn-outline-secondary" style="border-radius:8px">Anuluj</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
