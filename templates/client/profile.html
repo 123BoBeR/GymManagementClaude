@@ -93,6 +93,43 @@
   </div>
 </div>
 
+<!-- Edycja danych osobowych -->
+<div class="row g-3 mt-0">
+  <div class="col-md-8 offset-md-4">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5><i class="bi bi-pencil-fill me-2" style="color:#6366f1"></i>Edytuj dane</h5>
+      </div>
+      <div class="card-body">
+        <form action="/client/profile/edit" method="POST">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:600">Imię</label>
+              <input type="text" name="first_name" class="form-control form-control-sm"
+                     value="{{ member.first_name }}" required>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label" style="font-size:.85rem;font-weight:600">Nazwisko</label>
+              <input type="text" name="last_name" class="form-control form-control-sm"
+                     value="{{ member.last_name }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" style="font-size:.85rem;font-weight:600">Telefon</label>
+              <input type="text" name="phone" class="form-control form-control-sm"
+                     value="{{ member.phone or '' }}" placeholder="np. 500-123-456">
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-sm btn-secondary" style="border-radius:8px">
+                <i class="bi bi-check-lg me-1"></i>Zapisz zmiany
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Zmiana hasła -->
 <div class="row g-3 mt-0">
   <div class="col-md-8 offset-md-4">

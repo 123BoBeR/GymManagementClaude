@@ -7,6 +7,36 @@
   <p>Przegląd systemu zarządzania siłownią</p>
 </div>
 
+<!-- Alerty sprzętowe -->
+{% if broken_count > 0 %}
+<div class="alert d-flex align-items-center gap-3 mb-3 py-3"
+     style="background:#fee2e2;border:1px solid #fca5a5;border-radius:12px;color:#991b1b">
+  <i class="bi bi-tools fs-4 flex-shrink-0"></i>
+  <div class="flex-grow-1">
+    <strong>{{ broken_count }} urządzenie{% if broken_count > 1 %}a{% endif %} wymaga naprawy!</strong>
+    Sprzęt ze statusem "zepsute" wymaga natychmiastowej uwagi.
+  </div>
+  <a href="/admin/equipment" class="btn btn-sm"
+     style="background:#991b1b;color:#fff;border-radius:8px;white-space:nowrap">
+    <i class="bi bi-tools me-1"></i>Przejdź do sprzętu
+  </a>
+</div>
+{% endif %}
+{% if maintenance_count > 0 %}
+<div class="alert d-flex align-items-center gap-3 mb-3 py-3"
+     style="background:#fef3c7;border:1px solid #fcd34d;border-radius:12px;color:#92400e">
+  <i class="bi bi-wrench fs-4 flex-shrink-0"></i>
+  <div class="flex-grow-1">
+    <strong>{{ maintenance_count }} urządzenie{% if maintenance_count > 1 %}a{% endif %} w serwisie.</strong>
+    Sprzęt tymczasowo wyłączony z użytku.
+  </div>
+  <a href="/admin/equipment" class="btn btn-sm"
+     style="background:#92400e;color:#fff;border-radius:8px;white-space:nowrap">
+    <i class="bi bi-eye me-1"></i>Podgląd
+  </a>
+</div>
+{% endif %}
+
 <!-- Stat cards -->
 <div class="row g-3 mb-4">
   <div class="col-sm-6 col-xl-3">

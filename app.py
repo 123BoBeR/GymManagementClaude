@@ -128,6 +128,9 @@ def admin_dashboard():
         key=lambda x: -x[1]
     )[:5]
 
+    broken_count = Equipment.query.filter_by(status='broken').count()
+    maintenance_count = Equipment.query.filter_by(status='maintenance').count()
+
     return render_template(
         'admin/dashboard.html',
         stats=stats,
@@ -138,6 +141,8 @@ def admin_dashboard():
         sub_data=json.dumps(sub_data),
         class_labels=json.dumps([c[0] for c in class_stats]),
         class_data=json.dumps([c[1] for c in class_stats]),
+        broken_count=broken_count,
+        maintenance_count=maintenance_count,
     )
 
 
@@ -312,6 +317,25 @@ def admin_class_new():
     return redirect(url_for('admin_classes'))
 
 
+@app.route('/admin/classes/<int:id>/edit', methods=['GET', 'POST'])
+@role_required('admin')
+def admin_class_edit(id):
+    gym_class = GymClass.query.get_or_404(id)
+    trainers = Trainer.query.all()
+    if request.method == 'POST':
+        gym_class.name = request.form.get('name', gym_class.name)
+        gym_class.description = request.form.get('description', '')
+        gym_class.trainer_id = int(request.form.get('trainer_id', gym_class.trainer_id))
+        gym_class.schedule_day = request.form.get('schedule_day', gym_class.schedule_day)
+        gym_class.schedule_time = request.form.get('schedule_time', gym_class.schedule_time)
+        gym_class.duration_minutes = int(request.form.get('duration_minutes', gym_class.duration_minutes))
+        gym_class.max_capacity = int(request.form.get('max_capacity', gym_class.max_capacity))
+        db.session.commit()
+        flash('Zajęcia zaktualizowane.', 'success')
+        return redirect(url_for('admin_classes'))
+    return render_template('admin/class_edit.html', gym_class=gym_class, trainers=trainers)
+
+
 @app.route('/admin/classes/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_class_delete(id):
@@ -407,6 +431,24 @@ def trainer_schedule():
                       for c in classes}
     return render_template('trainer/schedule.html', trainer=trainer,
                            classes=classes, booking_counts=booking_counts)
+
+
+@app.route('/trainer/profile', methods=['GET', 'POST'])
+@role_required('trainer')
+def trainer_profile():
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    if request.method == 'POST':
+        ok, msg = TrainerService.update(
+            trainer=trainer,
+            first_name=trainer.first_name,
+            last_name=trainer.last_name,
+            specialization=request.form.get('specialization', ''),
+            hourly_rate=float(request.form.get('hourly_rate') or 0),
+        )
+        flash(msg, 'success' if ok else 'danger')
+        return redirect(url_for('trainer_profile'))
+    return render_template('trainer/profile.html', trainer=trainer)
 
 
 @app.route('/trainer/members')
@@ -532,6 +574,23 @@ def client_change_password():
     return redirect(url_for('client_profile'))
 
 
+@app.route('/client/profile/edit', methods=['POST'])
+@role_required('client')
+def client_profile_edit():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    ok, msg = MemberService.update(
+        member=member,
+        first_name=request.form.get('first_name', member.first_name).strip(),
+        last_name=request.form.get('last_name', member.last_name).strip(),
+        phone=request.form.get('phone', '').strip(),
+        sub_type=member.subscription_type,
+        sub_end=member.subscription_end,
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client_profile'))
+
+
 @app.route('/trainer/profile/change-password', methods=['POST'])
 @role_required('trainer')
 def trainer_change_password():
@@ -543,7 +602,7 @@ def trainer_change_password():
         request.form.get('confirm_password', ''),
     )
     flash(msg, 'success' if ok else 'danger')
-    return redirect(url_for('trainer_dashboard'))
+    return redirect(url_for('trainer_profile'))
 
 
 @app.route('/admin/profile/change-password', methods=['POST'])
@@ -558,6 +617,17 @@ def admin_change_password():
     )
     flash(msg, 'success' if ok else 'danger')
     return redirect(url_for('admin_dashboard'))
+
+
+# ── Admin — kolejka oczekujących ─────────────────────────────────────────────
+
+@app.route('/admin/waitlist')
+@role_required('admin')
+def admin_waitlist():
+    entries = (Waitlist.query
+               .order_by(Waitlist.class_id, Waitlist.added_at)
+               .all())
+    return render_template('admin/waitlist.html', entries=entries)
 
 
 # ── Client — płatności ───────────────────────────────────────────────────────

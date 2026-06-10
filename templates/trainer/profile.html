@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Profil — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-fill me-2" style="color:#e94560"></i>Mój Profil</h1>
+  <p>Twoje dane i ustawienia konta</p>
+</div>
+
+<div class="row g-3">
+  <!-- Avatar + dane -->
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <div style="width:80px;height:80px;border-radius:50%;background:#6366f1;
+                    display:flex;align-items:center;justify-content:center;
+                    color:#fff;font-size:2rem;font-weight:700;margin:0 auto 1rem">
+          {{ trainer.first_name[0] }}{{ trainer.last_name[0] }}
+        </div>
+        <h5 class="fw-bold mb-0">{{ trainer.first_name }} {{ trainer.last_name }}</h5>
+        <div class="text-muted mt-1 mb-3" style="font-size:.85rem">
+          <code>{{ trainer.user.username }}</code>
+        </div>
+        <span class="badge bg-warning text-dark px-3 py-2">Trener</span>
+      </div>
+    </div>
+
+    <!-- Statystyki -->
+    <div class="card mt-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted" style="font-size:.85rem">Zajęcia łącznie</span>
+          <span class="fw-bold">{{ trainer.classes | length }}</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <span class="text-muted" style="font-size:.85rem">Stawka / godz.</span>
+          <span class="fw-bold">{{ '%.0f'|format(trainer.hourly_rate) if trainer.hourly_rate else '—' }} zł</span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="text-muted" style="font-size:.85rem">Unikalnych klientów</span>
+          <span class="fw-bold">
+            {{ trainer.classes | map(attribute='bookings') | sum(start=[])
+               | selectattr('status','eq','confirmed') | map(attribute='member_id')
+               | list | unique | list | length }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dane + edycja -->
+  <div class="col-md-8">
+    <div class="card mb-3">
+      <div class="card-header">
+        <h5><i class="bi bi-person-lines-fill me-2" style="color:#6366f1"></i>Dane osobowe</h5>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0" style="font-size:.9rem">
+          <dt class="col-sm-4 text-muted fw-normal">Imię</dt>
+          <dd class="col-sm-8 fw-semibold">{{ trainer.first_name }}</dd>
+          <dt class="col-sm-4 text-muted fw-normal">Nazwisko</dt>
+          <dd class="col-sm-8 fw-semibold">{{ trainer.last_name }}</dd>
+          <dt class="col-sm-4 text-muted fw-normal">Login</dt>
+          <dd class="col-sm-8"><code>{{ trainer.user.username }}</code></dd>
+        </dl>
+        <div class="alert alert-light mt-3 mb-0 py-2" style="font-size:.82rem;border-radius:8px">
+          <i class="bi bi-info-circle me-1"></i>
+          Imię i nazwisko zmienia administrator siłowni.
+        </div>
+      </div>
+    </div>
+
+    <!-- Edytowalne dane -->
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="bi bi-pencil-fill me-2" style="color:#e94560"></i>Edytuj dane zawodowe</h5>
+      </div>
+      <div class="card-body">
+        <form action="/trainer/profile" method="POST">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.88rem">Specjalizacja</label>
+              <input type="text" name="specialization" class="form-control"
+                     value="{{ trainer.specialization or '' }}"
+                     placeholder="np. Yoga, CrossFit, Siłownia">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label fw-semibold" style="font-size:.88rem">Stawka godzinowa (zł)</label>
+              <div class="input-group">
+                <input type="number" name="hourly_rate" class="form-control"
+                       value="{{ trainer.hourly_rate or '' }}" min="0" step="0.01"
+                       placeholder="np. 100">
+                <span class="input-group-text">zł/h</span>
+              </div>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-sm"
+                      style="background:#e94560;color:#fff;border-radius:8px">
+                <i class="bi bi-check-lg me-1"></i>Zapisz zmiany
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

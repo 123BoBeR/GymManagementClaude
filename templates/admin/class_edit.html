@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Edytuj zajęcia — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-pencil-fill me-2" style="color:#e94560"></i>Edytuj zajęcia</h1>
+    <p>Modyfikuj dane zajęć: <strong>{{ gym_class.name }}</strong></p>
+  </div>
+  <a href="/admin/classes" class="btn btn-sm btn-outline-secondary mt-1">
+    <i class="bi bi-arrow-left me-1"></i>Wróć
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body">
+        <form action="/admin/classes/{{ gym_class.id }}/edit" method="POST">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Nazwa zajęć</label>
+            <input type="text" name="name" class="form-control" required
+                   value="{{ gym_class.name }}">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Trener</label>
+            <select name="trainer_id" class="form-select" required>
+              {% for t in trainers %}
+                <option value="{{ t.id }}"
+                  {% if t.id == gym_class.trainer_id %}selected{% endif %}>
+                  {{ t.first_name }} {{ t.last_name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Opis</label>
+            <textarea name="description" class="form-control" rows="2">{{ gym_class.description or '' }}</textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Dzień</label>
+              <select name="schedule_day" class="form-select" required>
+                {% for d in ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela'] %}
+                  <option {% if d == gym_class.schedule_day %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Godzina</label>
+              <input type="time" name="schedule_time" class="form-control" required
+                     value="{{ gym_class.schedule_time }}">
+            </div>
+          </div>
+
+          <div class="row g-3 mb-4">
+            <div class="col">
+              <label class="form-label fw-semibold">Czas trwania (min)</label>
+              <input type="number" name="duration_minutes" class="form-control"
+                     value="{{ gym_class.duration_minutes }}" min="15" max="180">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Maks. miejsc</label>
+              <input type="number" name="max_capacity" class="form-control"
+                     value="{{ gym_class.max_capacity }}" min="1" max="100">
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn"
+                    style="background:#e94560;color:#fff;font-weight:600;border-radius:8px">
+              <i class="bi bi-check-lg me-1"></i>Zapisz zmiany
+            </button>
+            <a href="/admin/classes" class="btn btn-outline-secondary" style="border-radius:8px">
+              Anuluj
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

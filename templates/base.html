@@ -316,6 +316,9 @@
       <a href="/admin/payments" class="nav-link {% if '/admin/payments' in request.path %}active{% endif %}">
         <i class="bi bi-receipt"></i> Płatności
       </a>
+      <a href="/admin/waitlist" class="nav-link {% if '/admin/waitlist' in request.path %}active{% endif %}">
+        <i class="bi bi-hourglass-split"></i> Kolejka
+      </a>
     {% elif session.role == 'trainer' %}
       <a href="/trainer/" class="nav-link {% if request.path == '/trainer/' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
@@ -325,6 +328,9 @@
       </a>
       <a href="/trainer/members" class="nav-link {% if '/trainer/members' in request.path %}active{% endif %}">
         <i class="bi bi-people-fill"></i> Moi Klienci
+      </a>
+      <a href="/trainer/profile" class="nav-link {% if '/trainer/profile' in request.path %}active{% endif %}">
+        <i class="bi bi-person-fill"></i> Profil
       </a>
     {% else %}
       <a href="/client/" class="nav-link {% if request.path == '/client/' %}active{% endif %}">
