@@ -18,6 +18,19 @@
   </div>
 </div>
 
+<!-- Wyszukiwarka i filtr -->
+<div class="d-flex gap-2 mb-3">
+  <input id="search-name" type="text" class="form-control"
+         placeholder="Szukaj po imieniu lub nazwisku…"
+         style="max-width:320px;border-radius:8px">
+  <select id="filter-sub" class="form-select" style="max-width:180px;border-radius:8px">
+    <option value="">Wszystkie karnety</option>
+    <option value="monthly">Miesięczny</option>
+    <option value="annual">Roczny</option>
+    <option value="day_pass">Dzienny</option>
+  </select>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     {% if members %}
@@ -34,9 +47,10 @@
           <th></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="members-tbody">
         {% for m in members %}
-        <tr>
+        <tr data-name="{{ m.first_name | lower }} {{ m.last_name | lower }}"
+            data-sub="{{ m.subscription_type }}">
           <td class="ps-3 text-muted small">{{ m.id }}</td>
           <td><strong>{{ m.first_name }} {{ m.last_name }}</strong></td>
           <td><code style="font-size:.82rem">{{ m.user.username }}</code></td>
@@ -60,11 +74,23 @@
               <span class="badge bg-danger">Wygasły</span>
             {% endif %}
           </td>
-          <td class="pe-3">
+          <td class="pe-3" style="white-space:nowrap">
+            <!-- Reset hasła -->
+            <button class="btn btn-sm btn-outline-warning me-1" title="Resetuj hasło"
+                    data-bs-toggle="modal" data-bs-target="#resetPwdModal{{ m.id }}">
+              <i class="bi bi-key"></i>
+            </button>
+            <!-- Odnów karnet -->
+            <button class="btn btn-sm btn-outline-success me-1" title="Odnów karnet"
+                    data-bs-toggle="modal" data-bs-target="#renewModal{{ m.id }}">
+              <i class="bi bi-credit-card"></i>
+            </button>
+            <!-- Edytuj -->
             <a href="/admin/members/{{ m.id }}/edit"
                class="btn btn-sm btn-outline-secondary me-1">
               <i class="bi bi-pencil"></i>
             </a>
+            <!-- Usuń -->
             <form action="/admin/members/{{ m.id }}/delete" method="POST" class="d-inline"
                   onsubmit="return confirm('Usunąć klienta {{ m.first_name }} {{ m.last_name }}?')">
               <button type="submit" class="btn btn-sm btn-outline-danger">
@@ -76,9 +102,122 @@
         {% endfor %}
       </tbody>
     </table>
+    <div id="no-results" class="text-muted text-center py-4" style="display:none;font-size:.88rem">
+      Brak wyników dla podanych kryteriów.
+    </div>
     {% else %}
-    <p class="text-muted text-center py-5 mb-0">Brak klientów. <a href="/admin/members/new">Dodaj pierwszego.</a></p>
+    <p class="text-muted text-center py-5 mb-0">
+      Brak klientów. <a href="/admin/members/new">Dodaj pierwszego.</a>
+    </p>
     {% endif %}
   </div>
 </div>
+
+<!-- ── Modale resetowania hasła i odnawiania karnetu ─────────────────────── -->
+{% for m in members %}
+
+<!-- Modal: reset hasła -->
+<div class="modal fade" id="resetPwdModal{{ m.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-key-fill me-2 text-warning"></i>Reset hasła
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="/admin/members/{{ m.id }}/reset-password" method="POST">
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:.85rem">
+            Ustawiasz nowe hasło dla: <strong>{{ m.first_name }} {{ m.last_name }}</strong>
+          </p>
+          <label class="form-label fw-semibold" style="font-size:.82rem">Nowe hasło (min. 6 znaków)</label>
+          <input type="password" name="new_password" class="form-control form-control-sm"
+                 minlength="6" required autocomplete="new-password">
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-sm btn-warning text-dark fw-semibold">
+            <i class="bi bi-check-lg me-1"></i>Resetuj
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: odnów karnet -->
+<div class="modal fade" id="renewModal{{ m.id }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-credit-card-fill me-2 text-success"></i>Odnów karnet
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-1" style="font-size:.85rem">
+          Klient: <strong>{{ m.first_name }} {{ m.last_name }}</strong>
+        </p>
+        <p class="text-muted mb-3" style="font-size:.85rem">
+          Ważny do: <strong>{{ m.subscription_end.strftime('%d.%m.%Y') if m.subscription_end else '—' }}</strong>
+        </p>
+        <p style="font-size:.82rem;font-weight:600" class="mb-2">Przedłuż o:</p>
+        <div class="d-flex gap-2">
+          <form action="/admin/members/{{ m.id }}/renew" method="POST">
+            <input type="hidden" name="months" value="1">
+            <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:8px">
+              +1 miesiąc
+            </button>
+          </form>
+          <form action="/admin/members/{{ m.id }}/renew" method="POST">
+            <input type="hidden" name="months" value="3">
+            <button type="submit" class="btn btn-sm btn-outline-success" style="border-radius:8px">
+              +3 miesiące
+            </button>
+          </form>
+          <form action="/admin/members/{{ m.id }}/renew" method="POST">
+            <input type="hidden" name="months" value="12">
+            <button type="submit" class="btn btn-sm btn-success" style="border-radius:8px">
+              +1 rok
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Zamknij</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endfor %}
+
+<script>
+(function () {
+  const searchInput = document.getElementById('search-name');
+  const filterSelect = document.getElementById('filter-sub');
+  const tbody = document.getElementById('members-tbody');
+  const noResults = document.getElementById('no-results');
+  if (!tbody) return;
+
+  function filter() {
+    const query = searchInput.value.toLowerCase().trim();
+    const sub = filterSelect.value;
+    let visible = 0;
+    tbody.querySelectorAll('tr').forEach(row => {
+      const nameMatch = !query || row.dataset.name.includes(query);
+      const subMatch = !sub || row.dataset.sub === sub;
+      const show = nameMatch && subMatch;
+      row.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    noResults.style.display = visible === 0 ? '' : 'none';
+  }
+
+  searchInput.addEventListener('input', filter);
+  filterSelect.addEventListener('change', filter);
+})();
+</script>
 {% endblock %}

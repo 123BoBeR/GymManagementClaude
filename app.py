@@ -221,6 +221,41 @@ def admin_members_export():
     )
 
 
+@app.route('/admin/members/<int:id>/reset-password', methods=['POST'])
+@role_required('admin')
+def admin_member_reset_password(id):
+    member = Member.query.get_or_404(id)
+    new_password = request.form.get('new_password', '').strip()
+    if len(new_password) < 6:
+        flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
+        return redirect(url_for('admin_members'))
+    member.user.set_password(new_password)
+    db.session.commit()
+    flash(f'Hasło dla {member.first_name} {member.last_name} zostało zresetowane.', 'success')
+    return redirect(url_for('admin_members'))
+
+
+@app.route('/admin/members/<int:id>/renew', methods=['POST'])
+@role_required('admin')
+def admin_member_renew(id):
+    member = Member.query.get_or_404(id)
+    months = int(request.form.get('months', 1))
+    base = max(member.subscription_end, date.today()) if member.subscription_end else date.today()
+    # Dodaj miesiące ręcznie (unikamy dateutil)
+    year = base.year + (base.month - 1 + months) // 12
+    month = (base.month - 1 + months) % 12 + 1
+    import calendar
+    day = min(base.day, calendar.monthrange(year, month)[1])
+    member.subscription_end = date(year, month, day)
+    db.session.commit()
+    flash(
+        f'Karnet {member.first_name} {member.last_name} przedłużony do '
+        f'{member.subscription_end.strftime("%d.%m.%Y")}.',
+        'success'
+    )
+    return redirect(url_for('admin_members'))
+
+
 @app.route('/admin/members/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_member_delete(id):
