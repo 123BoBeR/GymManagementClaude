@@ -25,6 +25,7 @@ def create_app():
     app.register_blueprint(client_bp)
 
     app.jinja_env.globals['enumerate'] = enumerate
+    app.jinja_env.filters['enumerate'] = enumerate
 
     return app
 
