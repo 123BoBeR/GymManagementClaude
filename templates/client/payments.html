@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Płatności — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-credit-card-2-front me-2" style="color:#e94560"></i>Płatności</h1>
+  <p>Historia i opłacanie karnetu — {{ sub_label }} ({{ '%.0f'|format(amount) }} zł / miesiąc).</p>
+</div>
+
+<div class="card" style="max-width:760px">
+  <div class="card-header">
+    <h5><i class="bi bi-receipt me-2" style="color:#e94560"></i>Ostatnie 6 miesięcy</h5>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Miesiąc</th>
+          <th>Kwota</th>
+          <th>Status</th>
+          <th>Numer przelewu</th>
+          <th class="text-end pe-3">Akcja</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in months %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ m.month_year }}</td>
+          <td>{{ '%.0f'|format(m.amount) }} zł</td>
+          <td>
+            {% if m.status == 'completed' %}
+              <span class="badge bg-success">Opłacone</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Oczekuje</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.8rem;font-family:monospace">
+            {{ m.transfer_number or '—' }}
+          </td>
+          <td class="text-end pe-3">
+            {% if m.status != 'completed' %}
+            <form method="post" action="{{ url_for('client.client_payment_initiate') }}" class="d-inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="month_year" value="{{ m.month_year }}">
+              <button class="btn btn-sm btn-danger" style="font-size:.8rem">
+                <i class="bi bi-cash-coin"></i> Opłać
+              </button>
+            </form>
+            {% else %}
+              <i class="bi bi-check-circle-fill text-success"></i>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

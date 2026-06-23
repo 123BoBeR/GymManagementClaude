@@ -7,6 +7,15 @@
   <p>Historia i aktywne rezerwacje zajęć</p>
 </div>
 
+<div class="btn-group mb-3" role="group">
+  <a href="{{ url_for('client.client_bookings', status='active') }}"
+     class="btn btn-sm {% if status_filter == 'active' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Aktywne</a>
+  <a href="{{ url_for('client.client_bookings', status='all') }}"
+     class="btn btn-sm {% if status_filter == 'all' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Wszystkie</a>
+  <a href="{{ url_for('client.client_bookings', status='cancelled') }}"
+     class="btn btn-sm {% if status_filter == 'cancelled' %}btn-danger{% else %}btn-outline-secondary{% endif %}">Anulowane</a>
+</div>
+
 <div class="card">
   <div class="card-body p-0">
     {% if bookings %}

@@ -50,59 +50,92 @@
         </dl>
 
         {% if days_left is not none and days_left <= 7 %}
-        <div class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.83rem;border-radius:8px">
+        <div class="alert alert-warning mt-3 mb-2 py-2" style="font-size:.83rem;border-radius:8px">
           <i class="bi bi-exclamation-triangle me-1"></i>
-          Karnet wygasa za {{ days_left }} dni!
+          {% if days_left < 0 %}Karnet wygasł!{% else %}Karnet wygasa za {{ days_left }} dni!{% endif %}
         </div>
         {% endif %}
+
+        <button class="btn btn-danger w-100 mt-2" data-bs-toggle="modal" data-bs-target="#renewModal">
+          <i class="bi bi-arrow-repeat me-1"></i> Przedłuż karnet
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Ostatnie rezerwacje -->
+  <!-- Ten tydzień -->
   <div class="col-md-7">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <h5><i class="bi bi-bookmark-check me-2" style="color:#e94560"></i>Twoje rezerwacje</h5>
+        <h5><i class="bi bi-calendar-week me-2" style="color:#e94560"></i>Ten tydzień</h5>
         <a href="/client/bookings" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem">
-          Wszystkie
+          Wszystkie rezerwacje
         </a>
       </div>
       <div class="card-body p-0">
-        {% if bookings %}
+        {% if upcoming %}
         <table class="table table-hover mb-0">
           <thead class="table-light">
             <tr>
               <th class="ps-3">Zajęcia</th>
-              <th>Dzień</th>
+              <th>Data</th>
               <th>Godz.</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {% for b in bookings %}
+            {% for b in upcoming %}
             <tr>
-              <td class="ps-3 fw-semibold">{{ b.session.gym_class.name }}</td>
-              <td class="text-muted" style="font-size:.82rem">{{ b.session.session_date.strftime('%d.%m.%Y') }}</td>
-              <td>{{ b.session.gym_class.schedule_time }}</td>
-              <td>
-                {% if b.status == 'confirmed' %}
-                  <span class="badge bg-success">Aktywna</span>
-                {% else %}
-                  <span class="badge bg-secondary">Anulowana</span>
-                {% endif %}
+              <td class="ps-3 fw-semibold">
+                <a href="{{ url_for('client.client_session_detail', id=b.session.id) }}" class="text-decoration-none text-dark">
+                  {{ b.session.gym_class.name }}
+                </a>
               </td>
+              <td class="text-muted" style="font-size:.82rem">{{ b.session.session_date.strftime('%a %d.%m') }}</td>
+              <td>{{ b.session.gym_class.schedule_time }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
         {% else %}
         <div class="text-center py-4 text-muted" style="font-size:.88rem">
-          Brak rezerwacji.
-          <a href="/client/classes">Zapisz się na zajęcia →</a>
+          Brak zajęć w tym tygodniu.
+          <a href="/client/classes">Zapisz się →</a>
         </div>
         {% endif %}
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: przedłużanie karnetu -->
+<div class="modal fade" id="renewModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold"><i class="bi bi-arrow-repeat me-2" style="color:#e94560"></i>Przedłuż karnet</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{{ url_for('client.client_subscription_renew') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <p class="text-muted mb-3" style="font-size:.88rem">
+            Wybierz typ karnetu. Nowy okres doliczy się do
+            {% if subscription_active %}aktualnej daty końca.{% else %}dnia dzisiejszego.{% endif %}
+          </p>
+          <div class="mb-2">
+            <label class="form-label fw-semibold">Typ karnetu</label>
+            <select name="subscription_type" class="form-select">
+              <option value="monthly"  {% if member.subscription_type == 'monthly'  %}selected{% endif %}>Miesięczny — {{ '%.0f'|format(prices.monthly) }} zł (30 dni)</option>
+              <option value="annual"   {% if member.subscription_type == 'annual'   %}selected{% endif %}>Roczny — {{ '%.0f'|format(prices.annual) }} zł (365 dni)</option>
+              <option value="day_pass" {% if member.subscription_type == 'day_pass' %}selected{% endif %}>Dzienny — {{ '%.0f'|format(prices.day_pass) }} zł (1 dzień)</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn btn-danger fw-semibold"><i class="bi bi-check-lg me-1"></i> Przedłuż i opłać</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>

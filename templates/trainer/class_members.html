@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Uczestnicy — {{ gym_class.name }}{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-people-fill me-2" style="color:#e94560"></i>Uczestnicy — {{ gym_class.name }}</h1>
+    <p>{{ gym_class.schedule_day }}, {{ gym_class.schedule_time }} · {{ participants|length }} osób</p>
+  </div>
+  <a href="{{ url_for('trainer.trainer_schedule') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Wróć do harmonogramu
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if participants %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3" style="width:30px">#</th>
+          <th>Imię i nazwisko</th>
+          <th>Telefon</th>
+          <th>Karnet</th>
+          <th>Rezerwacji</th>
+          <th>Obecności</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in participants %}
+        {% set m = p.member %}
+        <tr>
+          <td class="ps-3 text-muted small">{{ loop.index }}</td>
+          <td class="fw-semibold">{{ m.first_name }} {{ m.last_name }}</td>
+          <td class="text-muted">{{ m.phone or '—' }}</td>
+          <td>
+            {% if m.subscription_end and m.subscription_end >= today %}
+              <span class="badge bg-success">Aktywny</span>
+            {% else %}
+              <span class="badge bg-danger">Wygasły</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ p.sessions }}</td>
+          <td>
+            <span class="badge bg-light text-dark border">{{ p.attended }} / {{ p.sessions }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted" style="font-size:.88rem">Brak zapisanych uczestników.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

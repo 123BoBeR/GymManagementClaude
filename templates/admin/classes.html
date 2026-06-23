@@ -138,6 +138,10 @@
             </div>
           </td>
           <td class="pe-3">
+            <a href="{{ url_for('admin.admin_class_members', id=c.id) }}"
+               class="btn btn-sm btn-outline-primary me-1" title="Uczestnicy">
+              <i class="bi bi-people-fill"></i>
+            </a>
             <form action="/admin/classes/{{ c.id }}/delete" method="POST" class="d-inline"
                   onsubmit="return confirm('Usunąć zajęcia {{ c.name }}?')">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

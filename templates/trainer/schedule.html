@@ -23,12 +23,12 @@
     <table class="table table-hover mb-0">
       <thead class="table-light">
         <tr>
-          <th class="ps-3">Dzień</th>
-          <th>Godzina</th>
+          <th class="ps-3">Godzina</th>
           <th>Zajęcia</th>
           <th>Czas</th>
           <th>Częstotliwość</th>
           <th>Miejsca / zapisy</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -45,8 +45,7 @@
           {% endif %}
           {% set cnt = booking_counts[c.id] %}
           <tr>
-            <td class="ps-3 text-muted" style="font-size:.8rem">-</td>
-            <td class="fw-bold">{{ c.schedule_time }}</td>
+            <td class="ps-3 fw-bold">{{ c.schedule_time }}</td>
             <td class="fw-semibold">{{ c.name }}</td>
             <td class="text-muted">{{ c.duration_minutes }} min</td>
             <td class="text-muted">
@@ -64,6 +63,12 @@
                 </div>
                 <span style="font-size:.8rem;color:#64748b">{{ cnt }}/{{ c.max_capacity }}</span>
               </div>
+            </td>
+            <td class="pe-3">
+              <a href="{{ url_for('trainer.trainer_class_members', id=c.id) }}"
+                 class="btn btn-sm btn-outline-primary" title="Uczestnicy">
+                <i class="bi bi-people-fill"></i>
+              </a>
             </td>
           </tr>
         {% endfor %}

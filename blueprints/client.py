@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, request, sessio
 from extensions import db
 from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
-from datetime import date
+from services import BookingService, WaitlistService, PaymentService, MemberService
+from datetime import date, datetime, timezone, timedelta
 
 bp = Blueprint('client', __name__, url_prefix='/client')
 
@@ -12,18 +13,32 @@ DAY_ORDER = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota
 @bp.route('/')
 @role_required('client')
 def client_dashboard():
+    from services import SubscriptionFactory
     user = db.session.get(User, session['user_id'])
     member = user.member
-    bookings = (Booking.query.filter_by(member_id=member.id, status='confirmed')
-                .order_by(Booking.booked_at.desc()).limit(5).all())
-    subscription_active = (member.subscription_end is not None and member.subscription_end >= date.today())
-    days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
+    subscription_active = MemberService.is_active(member)
+    days_left = MemberService.days_left(member)
+
+    # nadchodzące sesje w tym tygodniu (najbliższe 7 dni)
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    upcoming = (Booking.query
+                .filter_by(member_id=member.id, status='confirmed')
+                .join(ClassSession)
+                .filter(ClassSession.session_date >= today,
+                        ClassSession.session_date <= week_end,
+                        ClassSession.cancelled == False)
+                .order_by(ClassSession.session_date)
+                .all())
+
+    prices = {s.code: s.price() for s in SubscriptionFactory.all_types()}
     return render_template('client/dashboard.html',
                            member=member,
-                           bookings=bookings,
+                           upcoming=upcoming,
                            subscription_active=subscription_active,
                            days_left=days_left,
-                           today=date.today())
+                           prices=prices,
+                           today=today)
 
 
 @bp.route('/classes')
@@ -73,78 +88,42 @@ def client_classes():
 @role_required('client')
 def client_book(session_id):
     user = db.session.get(User, session['user_id'])
-    member = user.member
-    class_session = ClassSession.query.get_or_404(session_id)
-    gym_class = class_session.gym_class
-
-    if class_session.cancelled:
-        flash('Ta sesja została odwołana.', 'danger')
-        return redirect(url_for('client.client_classes'))
-
-    if class_session.session_date < date.today():
-        flash('Nie można rezerwować przeszłych sesji.', 'danger')
-        return redirect(url_for('client.client_classes'))
-
-    confirmed = Booking.query.filter_by(session_id=session_id, status='confirmed').count()
-    if confirmed >= gym_class.max_capacity:
-        flash('Brak wolnych miejsc na tę sesję.', 'danger')
-        return redirect(url_for('client.client_classes'))
-
-    if Booking.query.filter_by(member_id=member.id, session_id=session_id, status='confirmed').first():
-        flash('Jesteś już zapisany na tę sesję.', 'warning')
-        return redirect(url_for('client.client_classes'))
-
-    # Sprawdź konflikt terminów
-    def to_minutes(t_str):
-        h, m = map(int, t_str.split(':'))
-        return h * 60 + m
-
-    new_start = to_minutes(gym_class.schedule_time)
-    new_end = new_start + gym_class.duration_minutes
-
-    conflicting = (Booking.query
-                   .filter_by(member_id=member.id, status='confirmed')
-                   .join(ClassSession)
-                   .filter(ClassSession.session_date == class_session.session_date)
-                   .join(GymClass, ClassSession.class_id == GymClass.id)
-                   .filter(GymClass.schedule_day == gym_class.schedule_day)
-                   .all())
-    for b in conflicting:
-        ex_start = to_minutes(b.gym_class.schedule_time)
-        ex_end = ex_start + b.gym_class.duration_minutes
-        if new_start < ex_end and ex_start < new_end:
-            flash(
-                f'Konflikt terminów: "{b.gym_class.name}" '
-                f'({b.gym_class.schedule_day}, {b.gym_class.schedule_time}) '
-                f'pokrywa się z wybranymi zajęciami.',
-                'danger'
-            )
-            return redirect(url_for('client.client_classes'))
-
-    db.session.add(Booking(member_id=member.id, session_id=session_id, status='confirmed'))
-    # Usuń z listy oczekujących jeśli był
-    WaitlistEntry.query.filter_by(member_id=member.id, session_id=session_id).delete()
-    db.session.commit()
-    flash(f'Zapisano na: {gym_class.name} ({class_session.session_date.strftime("%d.%m.%Y")})!', 'success')
-    return redirect(url_for('client.client_bookings'))
+    ok, msg = BookingService.book(user.member.id, session_id)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client.client_bookings' if ok else 'client.client_classes'))
 
 
 @bp.route('/sessions/<int:session_id>/waitlist', methods=['POST'])
 @role_required('client')
 def client_waitlist(session_id):
     user = db.session.get(User, session['user_id'])
-    member = user.member
-    class_session = ClassSession.query.get_or_404(session_id)
-
-    if WaitlistEntry.query.filter_by(member_id=member.id, session_id=session_id).first():
-        flash('Już jesteś na liście oczekujących.', 'warning')
-        return redirect(url_for('client.client_classes'))
-
-    db.session.add(WaitlistEntry(member_id=member.id, session_id=session_id))
-    db.session.commit()
-    pos = WaitlistEntry.query.filter_by(session_id=session_id).count()
-    flash(f'Dodano na listę oczekujących — pozycja {pos}.', 'info')
+    ok, msg = WaitlistService.join(user.member.id, session_id)
+    flash(msg, 'info' if ok else 'warning')
     return redirect(url_for('client.client_classes'))
+
+
+@bp.route('/sessions/<int:id>')
+@role_required('client')
+def client_session_detail(id):
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    class_session = db.get_or_404(ClassSession, id)
+    gym_class = class_session.gym_class
+
+    confirmed = Booking.query.filter_by(session_id=id, status='confirmed').count()
+    waitlist_count = WaitlistEntry.query.filter_by(session_id=id).count()
+    is_booked = Booking.query.filter_by(
+        member_id=member.id, session_id=id, status='confirmed').first() is not None
+    on_waitlist = WaitlistEntry.query.filter_by(
+        member_id=member.id, session_id=id).first() is not None
+
+    return render_template('client/session_detail.html',
+                           cs=class_session, gym_class=gym_class,
+                           confirmed=confirmed, waitlist_count=waitlist_count,
+                           is_booked=is_booked, on_waitlist=on_waitlist,
+                           is_full=confirmed >= gym_class.max_capacity,
+                           is_past=class_session.session_date < date.today(),
+                           today=date.today())
 
 
 @bp.route('/bookings')
@@ -152,38 +131,26 @@ def client_waitlist(session_id):
 def client_bookings():
     user = db.session.get(User, session['user_id'])
     member = user.member
-    bookings = Booking.query.filter_by(member_id=member.id).order_by(Booking.booked_at.desc()).all()
-    return render_template('client/bookings.html', member=member, bookings=bookings, today=date.today())
+    status_filter = request.args.get('status', 'active')
+
+    query = Booking.query.filter_by(member_id=member.id)
+    if status_filter == 'active':
+        query = query.filter_by(status='confirmed')
+    elif status_filter == 'cancelled':
+        query = query.filter_by(status='cancelled')
+    # 'all' → bez filtra statusu
+    bookings = query.order_by(Booking.booked_at.desc()).all()
+
+    return render_template('client/bookings.html', member=member, bookings=bookings,
+                           status_filter=status_filter, today=date.today())
 
 
 @bp.route('/bookings/<int:id>/cancel', methods=['POST'])
 @role_required('client')
 def client_cancel(id):
-    booking = Booking.query.get_or_404(id)
     user = db.session.get(User, session['user_id'])
-    if booking.member_id != user.member.id:
-        flash('Brak dostępu.', 'danger')
-        return redirect(url_for('client.client_bookings'))
-    booking.status = 'cancelled'
-    db.session.flush()
-
-    # Auto-awans pierwszej osoby z listy oczekujących
-    next_in_line = (WaitlistEntry.query
-                    .filter_by(session_id=booking.session_id)
-                    .order_by(WaitlistEntry.added_at)
-                    .first())
-    if next_in_line:
-        db.session.add(Booking(
-            member_id=next_in_line.member_id,
-            session_id=booking.session_id,
-            status='confirmed',
-        ))
-        db.session.delete(next_in_line)
-        flash('Rezerwacja anulowana. Miejsce przekazano pierwszej osobie z listy oczekujących.', 'success')
-    else:
-        flash('Rezerwacja anulowana.', 'success')
-
-    db.session.commit()
+    ok, msg = BookingService.cancel(user.member.id, id)
+    flash(msg, 'success' if ok else 'danger')
     return redirect(url_for('client.client_bookings'))
 
 
@@ -196,3 +163,104 @@ def client_profile():
     days_left = (member.subscription_end - date.today()).days if member.subscription_end else None
     return render_template('client/profile.html', member=member, today=date.today(),
                            bookings_count=bookings_count, days_left=days_left)
+
+
+@bp.route('/profile/edit', methods=['POST'])
+@role_required('client')
+def client_profile_edit():
+    user = db.session.get(User, session['user_id'])
+    ok, msg = MemberService.update_profile(
+        user.member,
+        first_name=request.form.get('first_name'),
+        last_name=request.form.get('last_name'),
+        phone=request.form.get('phone'),
+    )
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client.client_profile'))
+
+
+# ── Płatności ─────────────────────────────────────────────────────────────────
+
+@bp.route('/payments')
+@role_required('client')
+def client_payments():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    months = PaymentService.months_for_member(member, count=6)
+    amount = PaymentService.amount_for(member)
+    return render_template('client/payments.html', member=member, months=months,
+                           amount=amount, sub_label=_sub_label(member.subscription_type))
+
+
+@bp.route('/payments/initiate', methods=['POST'])
+@role_required('client')
+def client_payment_initiate():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    month_year = request.form.get('month_year', '')
+    ok, data = PaymentService.initiate(member.id, month_year)
+    if not ok:
+        flash(data.get('error', 'Nie udało się rozpocząć płatności.'), 'danger')
+        return redirect(url_for('client.client_payments'))
+    return redirect(url_for('client.client_payment_pay', id=data['payment_id']))
+
+
+@bp.route('/payments/<int:id>/pay')
+@role_required('client')
+def client_payment_pay(id):
+    from models import Payment
+    from services import BANK_ACCOUNT
+    user = db.session.get(User, session['user_id'])
+    payment = db.get_or_404(Payment, id)
+    if payment.member_id != user.member.id:
+        flash('Brak dostępu do tej płatności.', 'danger')
+        return redirect(url_for('client.client_payments'))
+    if payment.status == 'completed':
+        flash('Ta płatność jest już opłacona.', 'info')
+        return redirect(url_for('client.client_payments'))
+    return render_template('client/payment_pay.html', payment=payment,
+                           bank_account=BANK_ACCOUNT)
+
+
+@bp.route('/payments/<int:id>/confirm', methods=['POST'])
+@role_required('client')
+def client_payment_confirm(id):
+    user = db.session.get(User, session['user_id'])
+    ok, msg = PaymentService.confirm(id, user.member.id)
+    flash(msg, 'success' if ok else 'danger')
+    return redirect(url_for('client.client_payments'))
+
+
+def _sub_label(sub_type):
+    return {'monthly': 'Miesięczny', 'annual': 'Roczny', 'day_pass': 'Dzienny'}.get(sub_type, sub_type)
+
+
+# ── Przedłużanie karnetu przez klienta ───────────────────────────────────────
+
+@bp.route('/subscription/renew', methods=['POST'])
+@role_required('client')
+def client_subscription_renew():
+    from models import Payment
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+
+    sub_type = request.form.get('subscription_type', member.subscription_type)
+    # Stackuj od późniejszej z dat: dziś lub obecny koniec karnetu
+    current_end = member.subscription_end
+    from_date = max(date.today(), current_end) if current_end else date.today()
+
+    new_end = MemberService.renew_subscription(member, sub_type, from_date=from_date)
+
+    # Zapisz opłatę jako rozliczoną (completed) za bieżący miesiąc
+    amount = PaymentService.amount_for(member)
+    db.session.add(Payment(
+        member_id=member.id, amount=amount,
+        month_year=date.today().strftime('%Y-%m'), status='completed',
+        transfer_number=PaymentService.generate_transfer_number(),
+        paid_at=datetime.now(timezone.utc),
+    ))
+    db.session.commit()
+
+    flash(f'Karnet przedłużony do {new_end.strftime("%d.%m.%Y")} '
+          f'({_sub_label(sub_type)}, {amount:.0f} zł).', 'success')
+    return redirect(url_for('client.client_dashboard'))

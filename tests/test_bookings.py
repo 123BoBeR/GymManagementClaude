@@ -77,7 +77,7 @@ class TestBooking:
         b = Booking.query.filter_by(member_id=setup['member'].id, status='confirmed').first()
         resp = cancel(client, b.id)
         assert 'anulowana' in resp.data.decode()
-        assert Booking.query.get(b.id).status == 'cancelled'
+        assert db.session.get(Booking, b.id).status == 'cancelled'
 
     def test_cannot_cancel_other_members_booking(self, client, db, setup):
         # Utwórz drugiego klienta i zarezerwuj dla niego
@@ -89,7 +89,7 @@ class TestBooking:
         login(client, 'klient', 'pass')
         resp = cancel(client, b.id)
         assert 'Brak dostępu' in resp.data.decode()
-        assert Booking.query.get(b.id).status == 'confirmed'
+        assert db.session.get(Booking, b.id).status == 'confirmed'
 
     def test_conflict_same_day_same_time(self, client, db):
         tu = make_user(db, 'k_conflict', 'pass', 'client')

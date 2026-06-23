@@ -2,9 +2,10 @@ import csv
 import io
 from flask import Blueprint, render_template, redirect, url_for, request, flash, Response
 from extensions import db
-from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
+from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment, WaitlistEntry
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
+from services import PaymentService
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 
@@ -27,9 +28,56 @@ def admin_dashboard():
     equipment_issues = Equipment.query.filter(
         Equipment.status.in_(['broken', 'maintenance'])
     ).all()
+
+    # ── Dane do wykresów ──────────────────────────────────────────────────────
+    today = date.today()
+
+    # 1) Przychód z ostatnich 6 miesięcy (opłacone płatności)
+    rev_labels, rev_data = [], []
+    year, month = today.year, today.month
+    months_seq = []
+    for _ in range(6):
+        months_seq.append((year, month))
+        month -= 1
+        if month == 0:
+            month, year = 12, year - 1
+    for y, m in reversed(months_seq):
+        my = f"{y:04d}-{m:02d}"
+        total = sum(p.amount for p in Payment.query.filter_by(
+            month_year=my, status='completed').all())
+        rev_labels.append(my)
+        rev_data.append(total)
+
+    # 2) Podział karnetów
+    sub_counts = {
+        'Miesięczny': Member.query.filter_by(subscription_type='monthly').count(),
+        'Roczny': Member.query.filter_by(subscription_type='annual').count(),
+        'Dzienny': Member.query.filter_by(subscription_type='day_pass').count(),
+    }
+
+    # 3) Top 5 zajęć wg potwierdzonych rezerwacji
+    ranking = []
+    for c in GymClass.query.filter_by(status='approved').all():
+        cnt = (Booking.query.join(ClassSession)
+               .filter(ClassSession.class_id == c.id, Booking.status == 'confirmed')
+               .count())
+        if cnt:
+            ranking.append((c.name, cnt))
+    ranking.sort(key=lambda x: x[1], reverse=True)
+    top = ranking[:5]
+
+    charts = {
+        'revenue_labels': rev_labels,
+        'revenue_data': rev_data,
+        'sub_labels': list(sub_counts.keys()),
+        'sub_data': list(sub_counts.values()),
+        'top_labels': [t[0] for t in top],
+        'top_data': [t[1] for t in top],
+    }
     return render_template('admin/dashboard.html', stats=stats,
                            recent_bookings=recent_bookings,
-                           equipment_issues=equipment_issues)
+                           equipment_issues=equipment_issues,
+                           charts=charts)
 
 
 # ── Członkowie ────────────────────────────────────────────────────────────────
@@ -72,6 +120,22 @@ def admin_members():
     return render_template('admin/members.html', members=members, today=date.today())
 
 
+@bp.route('/members/<int:id>/payments')
+@role_required('admin')
+def admin_member_payments(id):
+    member = db.get_or_404(Member, id)
+    payments = (Payment.query.filter_by(member_id=member.id)
+                .order_by(Payment.month_year.desc()).all())
+    paid = [p for p in payments if p.status == 'completed']
+    stats = {
+        'paid_count': len(paid),
+        'pending_count': len(payments) - len(paid),
+        'total': sum(p.amount for p in paid),
+    }
+    return render_template('admin/member_payments.html', member=member,
+                           payments=payments, stats=stats)
+
+
 @bp.route('/members/new', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_member_new():
@@ -107,7 +171,7 @@ def admin_member_new():
 @bp.route('/members/<int:id>/edit', methods=['GET', 'POST'])
 @role_required('admin')
 def admin_member_edit(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     if request.method == 'POST':
         member.first_name = request.form.get('first_name', member.first_name)
         member.last_name = request.form.get('last_name', member.last_name)
@@ -125,7 +189,7 @@ def admin_member_edit(id):
 @bp.route('/members/<int:id>/reset-password', methods=['POST'])
 @role_required('admin')
 def admin_member_reset_password(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     new_password = request.form.get('new_password', '').strip()
     if len(new_password) < 6:
         flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
@@ -139,7 +203,7 @@ def admin_member_reset_password(id):
 @bp.route('/members/<int:id>/renew', methods=['POST'])
 @role_required('admin')
 def admin_member_renew(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     member.subscription_type = request.form.get('subscription_type', member.subscription_type)
     sub_end_str = request.form.get('subscription_end', '')
     if sub_end_str:
@@ -152,7 +216,7 @@ def admin_member_renew(id):
 @bp.route('/members/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_member_delete(id):
-    member = Member.query.get_or_404(id)
+    member = db.get_or_404(Member, id)
     db.session.delete(member.user)
     db.session.commit()
     flash('Klient usunięty.', 'success')
@@ -171,7 +235,7 @@ def admin_trainers():
 @bp.route('/trainers/<int:id>/edit', methods=['POST'])
 @role_required('admin')
 def admin_trainer_edit(id):
-    trainer = Trainer.query.get_or_404(id)
+    trainer = db.get_or_404(Trainer, id)
     trainer.first_name = request.form.get('first_name', trainer.first_name).strip()
     trainer.last_name = request.form.get('last_name', trainer.last_name).strip()
     trainer.specialization = request.form.get('specialization', trainer.specialization).strip()
@@ -210,10 +274,30 @@ def admin_classes():
                            booking_counts=booking_counts)
 
 
+@bp.route('/classes/<int:id>/members')
+@role_required('admin')
+def admin_class_members(id):
+    gym_class = db.get_or_404(GymClass, id)
+    # zbierz unikalnych członków z potwierdzonymi rezerwacjami w sesjach tych zajęć
+    rows = {}
+    for s in gym_class.sessions:
+        for b in s.bookings:
+            if b.status != 'confirmed':
+                continue
+            entry = rows.setdefault(b.member_id, {'member': b.member, 'sessions': 0})
+            entry['sessions'] += 1
+    participants = sorted(rows.values(),
+                          key=lambda r: (r['member'].last_name, r['member'].first_name))
+    total_confirmed = sum(r['sessions'] for r in participants)
+    return render_template('admin/class_members.html', gym_class=gym_class,
+                           participants=participants, total_confirmed=total_confirmed,
+                           today=date.today())
+
+
 @bp.route('/classes/<int:id>/approve', methods=['POST'])
 @role_required('admin')
 def admin_class_approve(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     if gym_class.status == 'approved':
         flash(f'Zajęcia "{gym_class.name}" są już zatwierdzone.', 'warning')
         return redirect(url_for('admin.admin_classes'))
@@ -230,7 +314,7 @@ def admin_class_approve(id):
 @bp.route('/classes/<int:id>/reject', methods=['POST'])
 @role_required('admin')
 def admin_class_reject(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     gym_class.status = 'rejected'
     gym_class.rejection_note = request.form.get('rejection_note', '').strip()
     db.session.commit()
@@ -241,7 +325,7 @@ def admin_class_reject(id):
 @bp.route('/classes/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_class_delete(id):
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
     db.session.delete(gym_class)
     db.session.commit()
     flash('Zajęcia usunięte.', 'success')
@@ -300,6 +384,55 @@ def admin_reports():
                            ranking=ranking)
 
 
+# ── Kolejka oczekujących ──────────────────────────────────────────────────────
+
+@bp.route('/waitlist')
+@role_required('admin')
+def admin_waitlist():
+    # pogrupuj wpisy wg sesji, z pozycją wg kolejności dodania
+    entries = WaitlistEntry.query.order_by(WaitlistEntry.added_at).all()
+    groups = {}
+    for e in entries:
+        groups.setdefault(e.session_id, []).append(e)
+
+    rows = []
+    for session_id, items in groups.items():
+        cs = db.session.get(ClassSession, session_id)
+        if cs is None:
+            continue
+        for pos, e in enumerate(items, start=1):
+            rows.append({
+                'class_name': cs.gym_class.name,
+                'session_date': cs.session_date,
+                'schedule_time': cs.gym_class.schedule_time,
+                'member': e.member,
+                'position': pos,
+                'added_at': e.added_at,
+            })
+    rows.sort(key=lambda r: (r['session_date'], r['schedule_time'], r['position']))
+    return render_template('admin/waitlist.html', rows=rows)
+
+
+# ── Płatności ─────────────────────────────────────────────────────────────────
+
+@bp.route('/payments')
+@role_required('admin')
+def admin_payments():
+    payments = (Payment.query
+                .order_by(Payment.status, Payment.month_year.desc())
+                .all())
+    completed = [p for p in payments if p.status == 'completed']
+    stats = {
+        'total_revenue': sum(p.amount for p in completed),
+        'completed_count': len(completed),
+        'pending_count': len(payments) - len(completed),
+    }
+    # mapowanie member_id -> member dla wyświetlenia nazwiska
+    members = {m.id: m for m in Member.query.all()}
+    return render_template('admin/payments.html', payments=payments,
+                           stats=stats, members=members)
+
+
 # ── Sprzęt ────────────────────────────────────────────────────────────────────
 
 @bp.route('/equipment')
@@ -329,7 +462,7 @@ def admin_equipment_new():
 @bp.route('/equipment/<int:id>/edit', methods=['POST'])
 @role_required('admin')
 def admin_equipment_edit(id):
-    equip = Equipment.query.get_or_404(id)
+    equip = db.get_or_404(Equipment, id)
     equip.name = request.form.get('name', equip.name).strip()
     equip.category = request.form.get('category', equip.category).strip()
     equip.status = request.form.get('status', equip.status)
@@ -344,7 +477,7 @@ def admin_equipment_edit(id):
 @bp.route('/equipment/<int:id>/delete', methods=['POST'])
 @role_required('admin')
 def admin_equipment_delete(id):
-    equip = Equipment.query.get_or_404(id)
+    equip = db.get_or_404(Equipment, id)
     name = equip.name
     db.session.delete(equip)
     db.session.commit()

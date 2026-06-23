@@ -79,6 +79,10 @@
                     data-bs-toggle="modal" data-bs-target="#renewModal{{ m.id }}">
               <i class="bi bi-credit-card"></i>
             </button>
+            <a href="{{ url_for('admin.admin_member_payments', id=m.id) }}"
+               class="btn btn-sm btn-outline-primary me-1" title="Płatności">
+              <i class="bi bi-receipt"></i>
+            </a>
             <a href="/admin/members/{{ m.id }}/edit"
                class="btn btn-sm btn-outline-secondary me-1">
               <i class="bi bi-pencil"></i>

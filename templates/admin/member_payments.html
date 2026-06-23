@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Płatności klienta — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-receipt me-2" style="color:#e94560"></i>Płatności — {{ member.first_name }} {{ member.last_name }}</h1>
+    <p>Historia transakcji wybranego klienta.</p>
+  </div>
+  <a href="{{ url_for('admin.admin_members') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Wróć do listy
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="ico" style="background:#dcfce7;color:#15803d"><i class="bi bi-check-circle"></i></div>
+      <div><div class="val">{{ stats.paid_count }}</div><div class="lbl">Opłaconych</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="ico" style="background:#fef3c7;color:#92400e"><i class="bi bi-hourglass-split"></i></div>
+      <div><div class="val">{{ stats.pending_count }}</div><div class="lbl">Oczekujących</div></div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card d-flex align-items-center gap-3">
+      <div class="ico" style="background:#dbeafe;color:#1d4ed8"><i class="bi bi-cash-coin"></i></div>
+      <div><div class="val">{{ '%.0f'|format(stats.total) }} zł</div><div class="lbl">Suma wpłat</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h5><i class="bi bi-list-ul me-2" style="color:#e94560"></i>Transakcje</h5></div>
+  <div class="card-body p-0">
+    {% if payments %}
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Miesiąc</th>
+          <th>Kwota</th>
+          <th>Status</th>
+          <th>Numer przelewu</th>
+          <th>Opłacono</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ p.month_year }}</td>
+          <td>{{ '%.0f'|format(p.amount) }} zł</td>
+          <td>
+            {% if p.status == 'completed' %}
+              <span class="badge bg-success">Opłacone</span>
+            {% else %}
+              <span class="badge bg-warning text-dark">Oczekuje</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.78rem;font-family:monospace">{{ p.transfer_number or '—' }}</td>
+          <td class="text-muted" style="font-size:.82rem">{{ p.paid_at.strftime('%d.%m.%Y %H:%M') if p.paid_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4 text-muted" style="font-size:.88rem">Brak płatności dla tego klienta.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

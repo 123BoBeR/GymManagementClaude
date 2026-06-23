@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from extensions import db
 from models import User
+from services import UserService
 
 bp = Blueprint('auth', __name__)
 
@@ -40,19 +41,14 @@ def change_password():
         return redirect(url_for('auth.login'))
     user = db.session.get(User, session['user_id'])
     if request.method == 'POST':
-        current = request.form.get('current_password', '')
-        new = request.form.get('new_password', '')
-        confirm = request.form.get('confirm_password', '')
-        if not user.check_password(current):
-            flash('Aktualne hasło jest nieprawidłowe.', 'danger')
-        elif len(new) < 6:
-            flash('Nowe hasło musi mieć co najmniej 6 znaków.', 'danger')
-        elif new != confirm:
-            flash('Hasła nie są identyczne.', 'danger')
-        else:
-            user.set_password(new)
-            db.session.commit()
-            flash('Hasło zmienione pomyślnie.', 'success')
+        ok, msg = UserService.change_password(
+            user,
+            request.form.get('current_password', ''),
+            request.form.get('new_password', ''),
+            request.form.get('confirm_password', ''),
+        )
+        flash(msg, 'success' if ok else 'danger')
+        if ok:
             return redirect(url_for('auth.index'))
     return render_template('change_password.html')
 

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Przelew — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-bank me-2" style="color:#e94560"></i>Przelew bankowy</h1>
+  <p>Opłata za karnet — miesiąc {{ payment.month_year }}.</p>
+</div>
+
+<div class="card" style="max-width:520px">
+  <div class="card-header">
+    <h5><i class="bi bi-shield-lock me-2" style="color:#e94560"></i>Dane do przelewu</h5>
+  </div>
+  <div class="card-body">
+    <dl class="row mb-0" style="font-size:.9rem">
+      <dt class="col-5 text-muted fw-normal">Odbiorca</dt>
+      <dd class="col-7 fw-semibold">GymApp Sp. z o.o.</dd>
+
+      <dt class="col-5 text-muted fw-normal">Numer konta</dt>
+      <dd class="col-7" style="font-family:monospace;font-size:.82rem">{{ bank_account }}</dd>
+
+      <dt class="col-5 text-muted fw-normal">Tytuł przelewu</dt>
+      <dd class="col-7" style="font-family:monospace;font-size:.82rem">{{ payment.transfer_number }}</dd>
+
+      <dt class="col-5 text-muted fw-normal">Kwota</dt>
+      <dd class="col-7 fw-bold" style="font-size:1.1rem;color:#e94560">{{ '%.2f'|format(payment.amount) }} zł</dd>
+    </dl>
+
+    <hr>
+
+    <!-- pasek postępu (ukryty do kliknięcia) -->
+    <div id="progress-wrap" class="mb-3 d-none">
+      <div class="d-flex justify-content-between mb-1" style="font-size:.8rem">
+        <span class="text-muted" id="progress-label">Łączenie z bankiem…</span>
+        <span class="text-muted" id="progress-pct">0%</span>
+      </div>
+      <div class="progress" style="height:8px">
+        <div id="progress-bar" class="progress-bar bg-danger" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div id="success-box" class="alert alert-success d-none mb-3 py-2" style="font-size:.85rem">
+      <i class="bi bi-check-circle-fill me-1"></i> Przelew zaksięgowany! Zatwierdzanie…
+    </div>
+
+    <form id="confirm-form" method="post" action="{{ url_for('client.client_payment_confirm', id=payment.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="button" id="pay-btn" class="btn btn-danger w-100" onclick="simulateTransfer()">
+        <i class="bi bi-cash-coin me-1"></i> Symuluj przelew i zatwierdź
+      </button>
+      <a href="{{ url_for('client.client_payments') }}" class="btn btn-link w-100 mt-2 text-muted" style="font-size:.83rem">
+        Anuluj
+      </a>
+    </form>
+  </div>
+</div>
+
+<script>
+function simulateTransfer() {
+  const btn = document.getElementById('pay-btn');
+  const wrap = document.getElementById('progress-wrap');
+  const bar = document.getElementById('progress-bar');
+  const pct = document.getElementById('progress-pct');
+  const label = document.getElementById('progress-label');
+  const success = document.getElementById('success-box');
+
+  btn.disabled = true;
+  wrap.classList.remove('d-none');
+
+  const steps = [
+    [30, 'Weryfikacja danych…'],
+    [60, 'Realizacja przelewu…'],
+    [90, 'Księgowanie…'],
+    [100, 'Gotowe!'],
+  ];
+  let i = 0;
+  const timer = setInterval(() => {
+    const [val, text] = steps[i];
+    bar.style.width = val + '%';
+    pct.textContent = val + '%';
+    label.textContent = text;
+    i++;
+    if (i >= steps.length) {
+      clearInterval(timer);
+      success.classList.remove('d-none');
+      setTimeout(() => document.getElementById('confirm-form').submit(), 800);
+    }
+  }, 600);
+}
+</script>
+{% endblock %}

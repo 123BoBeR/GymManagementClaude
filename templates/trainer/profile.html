@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Profil — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-badge me-2" style="color:#e94560"></i>Mój profil</h1>
+  <p>Twoje dane i statystyki.</p>
+</div>
+
+<div class="row g-3">
+  <!-- Statystyki -->
+  <div class="col-md-5">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:54px;height:54px;border-radius:50%;background:#e94560;
+                      display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-person-fill text-white fs-3"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:1.1rem">{{ trainer.first_name }} {{ trainer.last_name }}</div>
+            <div class="text-muted" style="font-size:.85rem">{{ trainer.specialization or 'Trener' }}</div>
+          </div>
+        </div>
+        <hr>
+        <dl class="row mb-0" style="font-size:.9rem">
+          <dt class="col-7 text-muted fw-normal">Aktywne zajęcia</dt>
+          <dd class="col-5 fw-semibold text-end">{{ classes_count }}</dd>
+          <dt class="col-7 text-muted fw-normal">Podopiecznych</dt>
+          <dd class="col-5 fw-semibold text-end">{{ total_members }}</dd>
+          <dt class="col-7 text-muted fw-normal">Stawka godzinowa</dt>
+          <dd class="col-5 fw-semibold text-end">{{ '%.0f'|format(trainer.hourly_rate) if trainer.hourly_rate else '—' }} zł</dd>
+        </dl>
+      </div>
+    </div>
+    <a href="/change-password" class="btn btn-outline-secondary w-100">
+      <i class="bi bi-shield-lock me-1"></i> Zmień hasło
+    </a>
+  </div>
+
+  <!-- Edycja -->
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-header"><h5><i class="bi bi-pencil-square me-2" style="color:#e94560"></i>Edytuj dane</h5></div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('trainer.trainer_profile') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Specjalizacja</label>
+            <input type="text" name="specialization" class="form-control"
+                   value="{{ trainer.specialization or '' }}" placeholder="np. Yoga i pilates">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Stawka godzinowa (zł)</label>
+            <input type="number" step="0.01" min="0" name="hourly_rate" class="form-control"
+                   value="{{ '%.2f'|format(trainer.hourly_rate) if trainer.hourly_rate else '' }}">
+          </div>
+          <button type="submit" class="btn btn-danger fw-semibold">
+            <i class="bi bi-check-lg me-1"></i> Zapisz zmiany
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

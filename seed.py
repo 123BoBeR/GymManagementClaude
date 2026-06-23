@@ -1,6 +1,7 @@
 from app import create_app
 from extensions import db
-from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment
+from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment
+from services import PaymentService, SubscriptionFactory
 from blueprints.sessions import generate_sessions
 from datetime import date, datetime
 
@@ -168,6 +169,27 @@ def seed():
         for name, category, status, purchase_date in equipment_rows:
             db.session.add(Equipment(name=name, category=category,
                                      status=status, purchase_date=purchase_date))
+
+        # ── Płatności (kilka opłaconych + jedna oczekująca) ──────────────────
+        payments_rows = [
+            # (member, month_year, status)
+            (tomasz,   '2026-04', 'completed'),
+            (tomasz,   '2026-05', 'completed'),
+            (ewa,      '2026-04', 'completed'),
+            (ewa,      '2026-05', 'completed'),
+            (ewa,      '2026-06', 'completed'),
+            (michal,   '2026-05', 'completed'),
+            (michal,   '2026-06', 'pending'),
+            (karolina, '2026-05', 'completed'),
+        ]
+        for member, my, status in payments_rows:
+            amount = SubscriptionFactory.create(member.subscription_type).price()
+            paid_at = datetime(int(my[:4]), int(my[5:7]), 10, 12, 0) if status == 'completed' else None
+            db.session.add(Payment(
+                member_id=member.id, amount=amount, month_year=my, status=status,
+                transfer_number=PaymentService.generate_transfer_number(),
+                paid_at=paid_at,
+            ))
 
         db.session.commit()
 

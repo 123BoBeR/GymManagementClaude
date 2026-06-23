@@ -113,3 +113,17 @@ class Equipment(db.Model):
     category = db.Column(db.String(50))
     status = db.Column(db.String(20), default='working')  # working | maintenance | broken
     purchase_date = db.Column(db.Date)
+
+
+class Payment(db.Model):
+    __tablename__ = 'payments'
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    month_year = db.Column(db.String(7), nullable=False)         # format: "YYYY-MM"
+    status = db.Column(db.String(20), default='pending')         # pending | completed
+    transfer_number = db.Column(db.String(60))                   # numer przelewu TRF-xxxx-xxxx-xxxx
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    paid_at = db.Column(db.DateTime)
+
+    member = db.relationship('Member', backref='payments')

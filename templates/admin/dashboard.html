@@ -71,6 +71,28 @@
   </div>
 </div>
 
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-cash-coin me-2" style="color:#e94560"></i>Przychód — ostatnie 6 miesięcy</h5></div>
+      <div class="card-body"><canvas id="revenueChart" height="120"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-pie-chart me-2" style="color:#e94560"></i>Podział karnetów</h5></div>
+      <div class="card-body d-flex align-items-center justify-content-center"><canvas id="subChart" height="200"></canvas></div>
+    </div>
+  </div>
+</div>
+
+{% if charts.top_labels %}
+<div class="card mb-4">
+  <div class="card-header"><h5><i class="bi bi-trophy me-2" style="color:#e94560"></i>Top 5 zajęć</h5></div>
+  <div class="card-body"><canvas id="topChart" height="90"></canvas></div>
+</div>
+{% endif %}
+
 <div class="card">
   <div class="card-header">
     <h5><i class="bi bi-clock-history me-2" style="color:#e94560"></i>Ostatnie rezerwacje</h5>
@@ -110,4 +132,51 @@
     {% endif %}
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const accent = '#e94560';
+
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ charts.revenue_labels | tojson }},
+      datasets: [{
+        label: 'Przychód (zł)',
+        data: {{ charts.revenue_data | tojson }},
+        backgroundColor: accent, borderRadius: 6,
+      }]
+    },
+    options: { plugins: { legend: { display: false } },
+               scales: { y: { beginAtZero: true } } }
+  });
+
+  new Chart(document.getElementById('subChart'), {
+    type: 'doughnut',
+    data: {
+      labels: {{ charts.sub_labels | tojson }},
+      datasets: [{
+        data: {{ charts.sub_data | tojson }},
+        backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b'],
+      }]
+    },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+
+  {% if charts.top_labels %}
+  new Chart(document.getElementById('topChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ charts.top_labels | tojson }},
+      datasets: [{
+        label: 'Rezerwacje',
+        data: {{ charts.top_data | tojson }},
+        backgroundColor: '#7c3aed', borderRadius: 6,
+      }]
+    },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } },
+               scales: { x: { beginAtZero: true } } }
+  });
+  {% endif %}
+</script>
 {% endblock %}

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ gym_class.name }} — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-activity me-2" style="color:#e94560"></i>{{ gym_class.name }}</h1>
+    <p>{{ cs.session_date.strftime('%A, %d.%m.%Y') }} o {{ gym_class.schedule_time }}</p>
+  </div>
+  <a href="{{ url_for('client.client_classes') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i> Wróć do zajęć
+  </a>
+</div>
+
+<div class="row g-3">
+  <!-- Opis + szczegóły -->
+  <div class="col-md-7">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-info-circle me-2" style="color:#e94560"></i>Szczegóły</h5></div>
+      <div class="card-body">
+        <p style="font-size:.92rem">{{ gym_class.description or 'Brak opisu.' }}</p>
+        <hr>
+        <dl class="row mb-0" style="font-size:.9rem">
+          <dt class="col-5 text-muted fw-normal">Trener</dt>
+          <dd class="col-7 fw-semibold">{{ gym_class.trainer.first_name }} {{ gym_class.trainer.last_name }}</dd>
+          <dt class="col-5 text-muted fw-normal">Specjalizacja</dt>
+          <dd class="col-7">{{ gym_class.trainer.specialization or '—' }}</dd>
+          <dt class="col-5 text-muted fw-normal">Dzień i godzina</dt>
+          <dd class="col-7">{{ gym_class.schedule_day }}, {{ gym_class.schedule_time }}</dd>
+          <dt class="col-5 text-muted fw-normal">Czas trwania</dt>
+          <dd class="col-7">{{ gym_class.duration_minutes }} min</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zajętość + akcja -->
+  <div class="col-md-5">
+    <div class="card h-100">
+      <div class="card-header"><h5><i class="bi bi-people me-2" style="color:#e94560"></i>Zapisy</h5></div>
+      <div class="card-body">
+        {% set pct = (confirmed / gym_class.max_capacity * 100) if gym_class.max_capacity else 0 %}
+        <div class="d-flex justify-content-between mb-1" style="font-size:.85rem">
+          <span class="text-muted">Zajętość</span>
+          <span class="fw-semibold">{{ confirmed }} / {{ gym_class.max_capacity }}</span>
+        </div>
+        <div class="progress mb-3" style="height:10px">
+          <div class="progress-bar {% if pct >= 100 %}bg-danger{% elif pct >= 75 %}bg-warning{% else %}bg-success{% endif %}"
+               style="width:{{ pct }}%"></div>
+        </div>
+        {% if waitlist_count %}
+        <p class="text-muted mb-3" style="font-size:.82rem">
+          <i class="bi bi-hourglass-split"></i> Na liście oczekujących: {{ waitlist_count }}
+        </p>
+        {% endif %}
+
+        {% if is_past %}
+          <div class="alert alert-secondary mb-0 py-2" style="font-size:.85rem">Ta sesja już się odbyła.</div>
+        {% elif cs.cancelled %}
+          <div class="alert alert-danger mb-0 py-2" style="font-size:.85rem">Sesja odwołana.</div>
+        {% elif is_booked %}
+          <div class="alert alert-success mb-0 py-2" style="font-size:.85rem">
+            <i class="bi bi-check-circle-fill me-1"></i> Jesteś zapisany na tę sesję.
+          </div>
+        {% elif is_full %}
+          {% if on_waitlist %}
+            <div class="alert alert-info mb-0 py-2" style="font-size:.85rem">Jesteś na liście oczekujących.</div>
+          {% else %}
+            <form method="post" action="{{ url_for('client.client_waitlist', session_id=cs.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-warning w-100"><i class="bi bi-hourglass me-1"></i> Dołącz do listy oczekujących</button>
+            </form>
+          {% endif %}
+        {% else %}
+          <form method="post" action="{{ url_for('client.client_book', session_id=cs.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-danger w-100"><i class="bi bi-bookmark-plus me-1"></i> Zapisz się</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

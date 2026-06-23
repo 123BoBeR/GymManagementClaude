@@ -132,7 +132,7 @@ def trainer_sessions():
 def trainer_attendance(session_id):
     user = db.session.get(User, session['user_id'])
     trainer = user.trainer
-    class_session = ClassSession.query.get_or_404(session_id)
+    class_session = db.get_or_404(ClassSession, session_id)
 
     if class_session.gym_class.trainer_id != trainer.id:
         flash('Brak dostępu do tej sesji.', 'danger')
@@ -162,7 +162,7 @@ def trainer_attendance(session_id):
 def trainer_class_edit(id):
     user = db.session.get(User, session['user_id'])
     trainer = user.trainer
-    gym_class = GymClass.query.get_or_404(id)
+    gym_class = db.get_or_404(GymClass, id)
 
     if gym_class.trainer_id != trainer.id:
         flash('Brak dostępu do tych zajęć.', 'danger')
@@ -194,6 +194,62 @@ def trainer_class_edit(id):
         return redirect(url_for('trainer.trainer_schedule'))
 
     return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS, edit=gym_class)
+
+
+@bp.route('/classes/<int:id>/members')
+@role_required('trainer')
+def trainer_class_members(id):
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    gym_class = db.get_or_404(GymClass, id)
+    if gym_class.trainer_id != trainer.id:
+        flash('Brak dostępu do tych zajęć.', 'danger')
+        return redirect(url_for('trainer.trainer_schedule'))
+
+    rows = {}
+    for s in gym_class.sessions:
+        for b in s.bookings:
+            if b.status != 'confirmed':
+                continue
+            entry = rows.setdefault(b.member_id, {
+                'member': b.member, 'sessions': 0, 'attended': 0,
+            })
+            entry['sessions'] += 1
+            if b.attended:
+                entry['attended'] += 1
+    participants = sorted(rows.values(),
+                          key=lambda r: (r['member'].last_name, r['member'].first_name))
+    return render_template('trainer/class_members.html', trainer=trainer,
+                           gym_class=gym_class, participants=participants,
+                           today=date.today())
+
+
+@bp.route('/profile', methods=['GET', 'POST'])
+@role_required('trainer')
+def trainer_profile():
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+
+    if request.method == 'POST':
+        trainer.specialization = request.form.get('specialization', trainer.specialization).strip()
+        rate_str = request.form.get('hourly_rate', '').strip()
+        if rate_str:
+            try:
+                trainer.hourly_rate = float(rate_str.replace(',', '.'))
+            except ValueError:
+                flash('Nieprawidłowa stawka godzinowa.', 'danger')
+                return redirect(url_for('trainer.trainer_profile'))
+        db.session.commit()
+        flash('Profil zaktualizowany.', 'success')
+        return redirect(url_for('trainer.trainer_profile'))
+
+    approved = [c for c in trainer.classes if c.status == 'approved']
+    total_members = len({
+        b.member_id for c in approved for s in c.sessions
+        for b in s.bookings if b.status == 'confirmed'
+    })
+    return render_template('trainer/profile.html', trainer=trainer,
+                           classes_count=len(approved), total_members=total_members)
 
 
 @bp.route('/members')
