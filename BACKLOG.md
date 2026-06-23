@@ -182,4 +182,14 @@ B19 → B20 → B21 → B22
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-23 · branch `dev`*
+---
+
+### SEKCJA 7 — Domknięcia po backlogu (kontynuacja)
+
+#### ✅ B24 · Admin: pełny CRUD trenerów — ZROBIONE
+Dodawanie trenera (User+Trainer, walidacja loginu/hasła) i usuwanie (cascade, blokada gdy ma zajęcia) — wcześniej tylko edycja. Plus link do szczegółów sesji z listy zajęć klienta. **+5 testów (`test_admin.py`).**
+**Pliki:** `blueprints/admin.py`, `templates/admin/trainers.html`, `templates/client/classes.html`, `tests/test_admin.py`
+
+---
+
+*Ostatnia aktualizacja: 2026-06-23 · branch `dev` · 72 testy*

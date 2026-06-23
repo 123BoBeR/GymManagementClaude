@@ -2,9 +2,15 @@
 {% block title %}Trenerzy — GymApp{% endblock %}
 
 {% block content %}
-<div class="ph">
-  <h1><i class="bi bi-person-badge-fill me-2" style="color:#e94560"></i>Trenerzy</h1>
-  <p>Kadra instruktorów siłowni</p>
+<div class="ph d-flex justify-content-between align-items-start">
+  <div>
+    <h1><i class="bi bi-person-badge-fill me-2" style="color:#e94560"></i>Trenerzy</h1>
+    <p>Kadra instruktorów siłowni</p>
+  </div>
+  <button class="btn btn-sm mt-1" style="background:#e94560;color:#fff;border-radius:8px"
+          data-bs-toggle="modal" data-bs-target="#newTrainerModal">
+    <i class="bi bi-plus-lg"></i> Dodaj trenera
+  </button>
 </div>
 
 <div class="row g-3">
@@ -26,10 +32,19 @@
               </div>
             </div>
           </div>
-          <button class="btn btn-sm btn-outline-secondary" title="Edytuj trenera"
-                  data-bs-toggle="modal" data-bs-target="#editTrainerModal{{ t.id }}">
-            <i class="bi bi-pencil"></i>
-          </button>
+          <div class="d-flex gap-1">
+            <button class="btn btn-sm btn-outline-secondary" title="Edytuj trenera"
+                    data-bs-toggle="modal" data-bs-target="#editTrainerModal{{ t.id }}">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <form action="/admin/trainers/{{ t.id }}/delete" method="POST" class="d-inline"
+                  onsubmit="return confirm('Usunąć trenera {{ t.first_name }} {{ t.last_name }}?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Usuń trenera">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </div>
         </div>
 
         <div class="mb-2" style="font-size:.87rem">
@@ -66,6 +81,57 @@
     <p class="text-muted text-center py-5">Brak trenerów w systemie.</p>
   </div>
   {% endfor %}
+</div>
+
+<!-- Modal: nowy trener -->
+<div class="modal fade" id="newTrainerModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:12px;border:none">
+      <div class="modal-header" style="border-bottom:1px solid #f1f5f9">
+        <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2" style="color:#e94560"></i>Nowy trener</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{{ url_for('admin.admin_trainer_new') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-body">
+          <div class="row g-3 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Imię</label>
+              <input type="text" name="first_name" class="form-control" required>
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Nazwisko</label>
+              <input type="text" name="last_name" class="form-control" required>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col">
+              <label class="form-label fw-semibold">Login</label>
+              <input type="text" name="username" class="form-control" required placeholder="np. jan.nowak">
+            </div>
+            <div class="col">
+              <label class="form-label fw-semibold">Hasło</label>
+              <input type="text" name="password" class="form-control" required placeholder="min. 6 znaków">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Specjalizacja</label>
+            <input type="text" name="specialization" class="form-control" placeholder="np. Yoga i pilates">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Stawka godzinowa (zł)</label>
+            <input type="number" name="hourly_rate" class="form-control" step="0.01" min="0" placeholder="np. 120">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #f1f5f9">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Anuluj</button>
+          <button type="submit" class="btn" style="background:#e94560;color:#fff;font-weight:600">
+            <i class="bi bi-plus-lg me-1"></i> Dodaj trenera
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <!-- Modale edycji -->

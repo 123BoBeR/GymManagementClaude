@@ -52,7 +52,10 @@
           <div class="d-flex align-items-center justify-content-between py-2
                        border-top" style="font-size:.85rem">
             <div>
-              <span class="fw-semibold">{{ s.session_date.strftime('%d.%m.%Y') }}</span>
+              <a href="{{ url_for('client.client_session_detail', id=s.id) }}"
+                 class="fw-semibold text-decoration-none text-dark" title="Szczegóły sesji">
+                {{ s.session_date.strftime('%d.%m.%Y') }}
+              </a>
               <span class="text-muted ms-1">{{ c.schedule_time }}</span>
               <span class="ms-2" style="font-size:.78rem;color:#94a3b8">
                 {{ cnt }}/{{ c.max_capacity }} miejsc

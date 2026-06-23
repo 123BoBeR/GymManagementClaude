@@ -232,6 +232,61 @@ def admin_trainers():
     return render_template('admin/trainers.html', trainers=trainers)
 
 
+@bp.route('/trainers/new', methods=['POST'])
+@role_required('admin')
+def admin_trainer_new():
+    username = request.form.get('username', '').strip()
+    if not username:
+        flash('Nazwa użytkownika jest wymagana.', 'danger')
+        return redirect(url_for('admin.admin_trainers'))
+    if User.query.filter_by(username=username).first():
+        flash('Nazwa użytkownika już istnieje.', 'danger')
+        return redirect(url_for('admin.admin_trainers'))
+
+    password = request.form.get('password', '')
+    if len(password) < 6:
+        flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
+        return redirect(url_for('admin.admin_trainers'))
+
+    user = User(username=username, role='trainer')
+    user.set_password(password)
+    db.session.add(user)
+    db.session.flush()
+
+    rate_str = request.form.get('hourly_rate', '').strip()
+    try:
+        hourly_rate = float(rate_str.replace(',', '.')) if rate_str else None
+    except ValueError:
+        hourly_rate = None
+
+    trainer = Trainer(
+        user_id=user.id,
+        first_name=request.form.get('first_name', '').strip(),
+        last_name=request.form.get('last_name', '').strip(),
+        specialization=request.form.get('specialization', '').strip(),
+        hourly_rate=hourly_rate,
+    )
+    db.session.add(trainer)
+    db.session.commit()
+    flash(f'Trener {trainer.first_name} {trainer.last_name} dodany.', 'success')
+    return redirect(url_for('admin.admin_trainers'))
+
+
+@bp.route('/trainers/<int:id>/delete', methods=['POST'])
+@role_required('admin')
+def admin_trainer_delete(id):
+    trainer = db.get_or_404(Trainer, id)
+    if trainer.classes:
+        flash(f'Nie można usunąć — trener ma przypisane zajęcia ({len(trainer.classes)}). '
+              f'Najpierw usuń lub przenieś zajęcia.', 'warning')
+        return redirect(url_for('admin.admin_trainers'))
+    name = f'{trainer.first_name} {trainer.last_name}'
+    db.session.delete(trainer.user)   # cascade usuwa profil trenera
+    db.session.commit()
+    flash(f'Trener {name} usunięty.', 'success')
+    return redirect(url_for('admin.admin_trainers'))
+
+
 @bp.route('/trainers/<int:id>/edit', methods=['POST'])
 @role_required('admin')
 def admin_trainer_edit(id):
