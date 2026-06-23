@@ -38,6 +38,17 @@
   </div>
 </div>
 
+<!-- Wyszukiwarka + filtr -->
+<div class="d-flex gap-2 mb-3">
+  <input id="eq-search" type="text" class="form-control" placeholder="Szukaj po nazwie lub kategorii..." style="max-width:320px">
+  <select id="eq-filter" class="form-select" style="max-width:180px">
+    <option value="">Wszystkie stany</option>
+    <option value="working">Sprawny</option>
+    <option value="maintenance">Serwis</option>
+    <option value="broken">Uszkodzony</option>
+  </select>
+</div>
+
 <!-- Tabela -->
 <div class="card">
   <div class="card-body p-0">
@@ -54,7 +65,7 @@
       </thead>
       <tbody>
         {% for e in equipment %}
-        <tr>
+        <tr data-name="{{ e.name | lower }} {{ (e.category or '') | lower }}" data-status="{{ e.status }}">
           <td class="ps-3 fw-semibold">{{ e.name }}</td>
           <td>
             <span class="badge" style="background:#f1f5f9;color:#475569;font-weight:500">
@@ -88,6 +99,9 @@
           </td>
         </tr>
         {% endfor %}
+        <tr id="eq-no-results" style="display:none">
+          <td colspan="5" class="text-muted text-center py-4">Nie znaleziono sprzętu.</td>
+        </tr>
       </tbody>
     </table>
     {% else %}
@@ -188,4 +202,29 @@
   </div>
 </div>
 {% endfor %}
+
+<script>
+  (function () {
+    const search = document.getElementById('eq-search');
+    const filter = document.getElementById('eq-filter');
+    const noResults = document.getElementById('eq-no-results');
+    if (!search) return;
+
+    function apply() {
+      const q = search.value.toLowerCase().trim();
+      const st = filter.value;
+      let visible = 0;
+      document.querySelectorAll('tbody tr:not(#eq-no-results)').forEach(row => {
+        const nameMatch = !q || row.dataset.name.includes(q);
+        const stMatch = !st || row.dataset.status === st;
+        const show = nameMatch && stMatch;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      noResults.style.display = visible === 0 ? '' : 'none';
+    }
+    search.addEventListener('input', apply);
+    filter.addEventListener('change', apply);
+  })();
+</script>
 {% endblock %}

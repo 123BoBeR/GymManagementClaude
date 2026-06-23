@@ -192,4 +192,10 @@ Dodawanie trenera (User+Trainer, walidacja loginu/hasła) i usuwanie (cascade, b
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-23 · branch `dev` · 72 testy*
+#### ✅ B25 · Polish: eksport płatności + filtr sprzętu + fix 404 — ZROBIONE
+Eksport płatności do CSV (admin, parytet z eksportem klientów), live search + filtr stanu na liście sprzętu, naprawa niewidocznego nagłówka 404 w trybie ciemnym. **+1 test.**
+**Pliki:** `blueprints/admin.py`, `templates/admin/payments.html`, `templates/admin/equipment.html`, `templates/404.html`, `tests/test_admin.py`
+
+---
+
+*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 73 testy*

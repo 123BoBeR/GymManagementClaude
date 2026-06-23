@@ -1,7 +1,8 @@
-"""Testy operacji administracyjnych: CRUD trenerów."""
+"""Testy operacji administracyjnych: CRUD trenerów, eksport płatności."""
 import pytest
-from models import User, Trainer
-from tests.conftest import make_user, make_trainer, make_class
+from datetime import date
+from models import User, Trainer, Payment
+from tests.conftest import make_user, make_member, make_trainer, make_class
 
 
 def login_admin(client, db):
@@ -64,3 +65,19 @@ class TestTrainerCrud:
         resp = client.post(f'/admin/trainers/{tid}/delete', follow_redirects=True)
         assert 'Nie można usunąć' in resp.data.decode()
         assert db.session.get(Trainer, tid) is not None
+
+
+class TestPaymentsExport:
+    def test_export_returns_csv(self, client, db):
+        login_admin(client, db)
+        cu = make_user(db, 'klient', 'pass123', 'client')
+        m = make_member(db, cu)
+        db.session.add(Payment(member_id=m.id, amount=99.0, month_year='2026-05',
+                               status='completed', transfer_number='TRF-1234-5678-9012'))
+        db.session.commit()
+        resp = client.get('/admin/payments/export')
+        assert resp.status_code == 200
+        assert 'text/csv' in resp.headers['Content-Type']
+        body = resp.data.decode('utf-8-sig')
+        assert 'Numer przelewu' in body
+        assert 'TRF-1234-5678-9012' in body

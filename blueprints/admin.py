@@ -470,6 +470,35 @@ def admin_waitlist():
 
 # ── Płatności ─────────────────────────────────────────────────────────────────
 
+@bp.route('/payments/export')
+@role_required('admin')
+def admin_payments_export():
+    members = {m.id: m for m in Member.query.all()}
+    payments = Payment.query.order_by(Payment.month_year.desc()).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Klient', 'Miesiąc', 'Kwota', 'Status',
+                     'Numer przelewu', 'Opłacono'])
+    status_labels = {'completed': 'Opłacone', 'pending': 'Oczekuje'}
+    for p in payments:
+        m = members.get(p.member_id)
+        writer.writerow([
+            p.id,
+            f'{m.first_name} {m.last_name}' if m else '—',
+            p.month_year,
+            f'{p.amount:.2f}',
+            status_labels.get(p.status, p.status),
+            p.transfer_number or '',
+            p.paid_at.strftime('%d.%m.%Y %H:%M') if p.paid_at else '',
+        ])
+    output.seek(0)
+    return Response(
+        output.getvalue().encode('utf-8-sig'),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=platnosci_{date.today()}.csv'},
+    )
+
+
 @bp.route('/payments')
 @role_required('admin')
 def admin_payments():
