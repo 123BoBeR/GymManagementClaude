@@ -16,14 +16,14 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
       {% if not member %}
-      <div class="mb-3">
-        <label class="form-label fw-semibold">Nazwa użytkownika</label>
-        <input type="text" name="username" class="form-control" required
-               placeholder="np. jan.kowalski">
+      <div class="alert alert-light border mb-3 py-2" style="font-size:.83rem">
+        <i class="bi bi-info-circle me-1" style="color:#6366f1"></i>
+        Login zostanie wygenerowany automatycznie w formacie
+        <code>[litera&nbsp;imienia].[nazwisko]</code> (np. <code>j.kowalski</code>).
       </div>
       <div class="mb-3">
         <label class="form-label fw-semibold">Hasło</label>
-        <input type="password" name="password" class="form-control" required placeholder="••••••••">
+        <input type="password" name="password" class="form-control" required placeholder="min. 6 znaków">
       </div>
       <hr class="my-3">
       {% endif %}
@@ -47,19 +47,21 @@
                value="{{ member.phone if member else '' }}" placeholder="np. 500-100-200">
       </div>
 
-      <div class="row g-3 mb-4">
-        <div class="col">
-          <label class="form-label fw-semibold">Typ karnetu</label>
-          <select name="subscription_type" class="form-select">
-            <option value="monthly"  {% if member and member.subscription_type == 'monthly'  %}selected{% endif %}>Miesięczny</option>
-            <option value="annual"   {% if member and member.subscription_type == 'annual'   %}selected{% endif %}>Roczny</option>
-            <option value="day_pass" {% if member and member.subscription_type == 'day_pass' %}selected{% endif %}>Karnet dzienny</option>
-          </select>
-        </div>
-        <div class="col">
-          <label class="form-label fw-semibold">Ważny do</label>
-          <input type="date" name="subscription_end" class="form-control"
-                 value="{{ member.subscription_end.strftime('%Y-%m-%d') if member and member.subscription_end else '' }}">
+      <div class="mb-4">
+        <label class="form-label fw-semibold">Typ karnetu</label>
+        <select name="subscription_type" class="form-select">
+          <option value="monthly"  {% if member and member.subscription_type == 'monthly'  %}selected{% endif %}>Miesięczny (30 dni)</option>
+          <option value="annual"   {% if member and member.subscription_type == 'annual'   %}selected{% endif %}>Roczny (365 dni)</option>
+          <option value="day_pass" {% if member and member.subscription_type == 'day_pass' %}selected{% endif %}>Karnet dzienny (1 dzień)</option>
+        </select>
+        <div class="form-text">
+          <i class="bi bi-calendar-check me-1"></i>
+          {% if member %}
+            Ważność: <strong>{{ member.subscription_end.strftime('%d.%m.%Y') if member.subscription_end else '—' }}</strong>.
+            Zmiana typu przeliczy datę końca od dziś.
+          {% else %}
+            Data ważności zostanie wyliczona automatycznie od dnia dodania.
+          {% endif %}
         </div>
       </div>
 

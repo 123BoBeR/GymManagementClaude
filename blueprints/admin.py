@@ -5,7 +5,7 @@ from extensions import db
 from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment, WaitlistEntry
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
-from services import PaymentService
+from services import PaymentService, UserService, MemberService, SubscriptionFactory
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 
@@ -140,30 +140,34 @@ def admin_member_payments(id):
 @role_required('admin')
 def admin_member_new():
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        if User.query.filter_by(username=username).first():
-            flash('Nazwa użytkownika już istnieje.', 'danger')
+        first = request.form.get('first_name', '').strip()
+        last = request.form.get('last_name', '').strip()
+        password = request.form.get('password', '')
+        sub_type = request.form.get('subscription_type', 'monthly')
+
+        if len(password) < 6:
+            flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
             return render_template('admin/member_form.html', member=None)
 
+        # Login generowany automatycznie: [litera imienia].[nazwisko]
+        username = UserService.generate_client_username(first, last)
         user = User(username=username, role='client')
-        user.set_password(request.form.get('password', ''))
+        user.set_password(password)
         db.session.add(user)
         db.session.flush()
 
-        sub_end_str = request.form.get('subscription_end', '')
-        sub_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date() if sub_end_str else None
-
         member = Member(
             user_id=user.id,
-            first_name=request.form.get('first_name', ''),
-            last_name=request.form.get('last_name', ''),
+            first_name=first,
+            last_name=last,
             phone=request.form.get('phone', ''),
-            subscription_type=request.form.get('subscription_type', 'monthly'),
-            subscription_end=sub_end,
+            subscription_type=sub_type,
+            # Ważność liczona automatycznie od dziś wg typu karnetu
+            subscription_end=SubscriptionFactory.create(sub_type).end_date(),
         )
         db.session.add(member)
         db.session.commit()
-        flash('Klient dodany pomyślnie.', 'success')
+        flash(f'Klient dodany. Login: {username}', 'success')
         return redirect(url_for('admin.admin_members'))
     return render_template('admin/member_form.html', member=None)
 
@@ -176,10 +180,12 @@ def admin_member_edit(id):
         member.first_name = request.form.get('first_name', member.first_name)
         member.last_name = request.form.get('last_name', member.last_name)
         member.phone = request.form.get('phone', member.phone)
-        member.subscription_type = request.form.get('subscription_type', member.subscription_type)
-        sub_end_str = request.form.get('subscription_end', '')
-        if sub_end_str:
-            member.subscription_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date()
+        old_type = member.subscription_type
+        new_type = request.form.get('subscription_type', old_type)
+        member.subscription_type = new_type
+        # Zmiana typu karnetu = przeliczenie ważności od dziś (bez ręcznych dat)
+        if new_type != old_type:
+            member.subscription_end = SubscriptionFactory.create(new_type).end_date()
         db.session.commit()
         flash('Dane zaktualizowane.', 'success')
         return redirect(url_for('admin.admin_members'))
@@ -204,12 +210,13 @@ def admin_member_reset_password(id):
 @role_required('admin')
 def admin_member_renew(id):
     member = db.get_or_404(Member, id)
-    member.subscription_type = request.form.get('subscription_type', member.subscription_type)
-    sub_end_str = request.form.get('subscription_end', '')
-    if sub_end_str:
-        member.subscription_end = datetime.strptime(sub_end_str, '%Y-%m-%d').date()
-    db.session.commit()
-    flash(f'Karnet dla {member.first_name} {member.last_name} zaktualizowany do {member.subscription_end.strftime("%d.%m.%Y")}.', 'success')
+    sub_type = request.form.get('subscription_type', member.subscription_type)
+    # Stackuj cyklicznie od późniejszej z dat: dziś lub obecny koniec karnetu
+    today = date.today()
+    from_date = max(today, member.subscription_end) if member.subscription_end else today
+    new_end = MemberService.renew_subscription(member, sub_type, from_date=from_date)
+    flash(f'Karnet dla {member.first_name} {member.last_name} przedłużony do '
+          f'{new_end.strftime("%d.%m.%Y")}.', 'success')
     return redirect(url_for('admin.admin_members'))
 
 
@@ -235,12 +242,10 @@ def admin_trainers():
 @bp.route('/trainers/new', methods=['POST'])
 @role_required('admin')
 def admin_trainer_new():
-    username = request.form.get('username', '').strip()
-    if not username:
-        flash('Nazwa użytkownika jest wymagana.', 'danger')
-        return redirect(url_for('admin.admin_trainers'))
-    if User.query.filter_by(username=username).first():
-        flash('Nazwa użytkownika już istnieje.', 'danger')
+    first = request.form.get('first_name', '').strip()
+    last = request.form.get('last_name', '').strip()
+    if not first or not last:
+        flash('Imię i nazwisko są wymagane.', 'danger')
         return redirect(url_for('admin.admin_trainers'))
 
     password = request.form.get('password', '')
@@ -248,6 +253,8 @@ def admin_trainer_new():
         flash('Hasło musi mieć co najmniej 6 znaków.', 'danger')
         return redirect(url_for('admin.admin_trainers'))
 
+    # Login generowany automatycznie: t.[imię].[nazwisko]
+    username = UserService.generate_trainer_username(first, last)
     user = User(username=username, role='trainer')
     user.set_password(password)
     db.session.add(user)
@@ -261,14 +268,14 @@ def admin_trainer_new():
 
     trainer = Trainer(
         user_id=user.id,
-        first_name=request.form.get('first_name', '').strip(),
-        last_name=request.form.get('last_name', '').strip(),
+        first_name=first,
+        last_name=last,
         specialization=request.form.get('specialization', '').strip(),
         hourly_rate=hourly_rate,
     )
     db.session.add(trainer)
     db.session.commit()
-    flash(f'Trener {trainer.first_name} {trainer.last_name} dodany.', 'success')
+    flash(f'Trener {trainer.first_name} {trainer.last_name} dodany. Login: {username}', 'success')
     return redirect(url_for('admin.admin_trainers'))
 
 

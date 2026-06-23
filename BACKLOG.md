@@ -198,4 +198,14 @@ Eksport płatności do CSV (admin, parytet z eksportem klientów), live search +
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 73 testy*
+#### ✅ B26 · Auto-loginy + auto-ważność + wyszukiwarka trenerów — ZROBIONE
+- Login klienta: `[litera_imienia].[nazwisko]`, przy kolizji narasta o kolejną literę (`j.kowalski` → `ja.kowalski` → `jan.kowalski`), polskie znaki transliterowane (`Łukasz Wójcik` → `l.wojcik`)
+- Login trenera: `t.[imię].[nazwisko]` (przy kolizji + numer)
+- Ważność karnetu zawsze wyliczana wg typu (koniec ręcznego wpisywania dat) — przy dodaniu, zmianie typu i odnowieniu (stackowanie cykliczne)
+- Wyszukiwarka na liście trenerów (live JS, jak u klientów)
+- `UserService.generate_client_username` / `generate_trainer_username` + transliteracja diakrytyków. **+10 testów.**
+**Pliki:** `services.py`, `blueprints/admin.py`, `templates/admin/{member_form,members,trainers}.html`, `tests/test_admin.py`
+
+---
+
+*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 83 testy*

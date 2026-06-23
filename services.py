@@ -11,11 +11,21 @@ Zebrane w jednym miejscu wzorce wykorzystane w projekcie:
 """
 
 import random
+import unicodedata
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone, timedelta
 
 from extensions import db
-from models import Member, GymClass, ClassSession, Booking, WaitlistEntry, Payment
+from models import User, Member, GymClass, ClassSession, Booking, WaitlistEntry, Payment
+
+
+def _slugify(text):
+    """Usuwa polskie znaki diakrytyczne i zostawia same małe litery/cyfry."""
+    text = unicodedata.normalize('NFKD', text or '')
+    text = ''.join(c for c in text if not unicodedata.combining(c))
+    # ł nie rozkłada się przez NFKD — podmień ręcznie
+    text = text.replace('ł', 'l').replace('Ł', 'L')
+    return ''.join(c for c in text.lower() if c.isalnum())
 
 BANK_ACCOUNT = "PL 12 3456 7890 1234 5678 9012 3456"
 
@@ -370,6 +380,38 @@ class MemberService:
 # ── Service Layer: użytkownicy ───────────────────────────────────────────────
 
 class UserService:
+    @staticmethod
+    def generate_client_username(first_name, last_name):
+        """Login klienta: [pierwsza litera imienia].[nazwisko].
+        Przy kolizji bierze kolejną literę imienia (ja.kowalski, jan.kowalski...),
+        a gdy całe imię nie wystarczy — dokłada numer."""
+        first = _slugify(first_name)
+        last = _slugify(last_name)
+        if not first or not last:
+            base = (first or last or 'klient')
+            return UserService._unique(base)
+        for i in range(1, len(first) + 1):
+            candidate = f"{first[:i]}.{last}"
+            if not User.query.filter_by(username=candidate).first():
+                return candidate
+        return UserService._unique(f"{first}.{last}")
+
+    @staticmethod
+    def generate_trainer_username(first_name, last_name):
+        """Login trenera: t.[całe imię].[całe nazwisko] (przy kolizji + numer)."""
+        first = _slugify(first_name)
+        last = _slugify(last_name)
+        base = f"t.{first}.{last}"
+        return UserService._unique(base)
+
+    @staticmethod
+    def _unique(base):
+        candidate, n = base, 1
+        while User.query.filter_by(username=candidate).first():
+            n += 1
+            candidate = f"{base}{n}"
+        return candidate
+
     @staticmethod
     def change_password(user, current, new, confirm):
         if not user.check_password(current):

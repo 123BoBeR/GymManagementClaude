@@ -13,9 +13,14 @@
   </button>
 </div>
 
-<div class="row g-3">
+<div class="d-flex gap-2 mb-3">
+  <input id="tr-search" type="text" class="form-control" placeholder="Szukaj po imieniu, nazwisku lub specjalizacji..." style="max-width:380px">
+</div>
+
+<div class="row g-3" id="tr-grid">
   {% for t in trainers %}
-  <div class="col-md-6 col-xl-4">
+  <div class="col-md-6 col-xl-4 tr-card"
+       data-name="{{ t.first_name|lower }} {{ t.last_name|lower }} {{ (t.specialization or '')|lower }}">
     <div class="card h-100">
       <div class="card-body">
         <div class="d-flex align-items-center justify-content-between mb-3">
@@ -82,6 +87,7 @@
   </div>
   {% endfor %}
 </div>
+<p id="tr-no-results" class="text-muted text-center py-4" style="display:none">Nie znaleziono trenerów.</p>
 
 <!-- Modal: nowy trener -->
 <div class="modal fade" id="newTrainerModal" tabindex="-1">
@@ -104,15 +110,13 @@
               <input type="text" name="last_name" class="form-control" required>
             </div>
           </div>
-          <div class="row g-3 mb-3">
-            <div class="col">
-              <label class="form-label fw-semibold">Login</label>
-              <input type="text" name="username" class="form-control" required placeholder="np. jan.nowak">
-            </div>
-            <div class="col">
-              <label class="form-label fw-semibold">Hasło</label>
-              <input type="text" name="password" class="form-control" required placeholder="min. 6 znaków">
-            </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Hasło</label>
+            <input type="text" name="password" class="form-control" required placeholder="min. 6 znaków">
+          </div>
+          <div class="alert alert-light border py-2 mb-3" style="font-size:.82rem">
+            <i class="bi bi-info-circle me-1" style="color:#6366f1"></i>
+            Login zostanie wygenerowany automatycznie: <code>t.[imię].[nazwisko]</code>.
           </div>
           <div class="mb-3">
             <label class="form-label fw-semibold">Specjalizacja</label>
@@ -181,4 +185,22 @@
   </div>
 </div>
 {% endfor %}
+
+<script>
+  (function () {
+    const search = document.getElementById('tr-search');
+    const noResults = document.getElementById('tr-no-results');
+    if (!search) return;
+    search.addEventListener('input', function () {
+      const q = search.value.toLowerCase().trim();
+      let visible = 0;
+      document.querySelectorAll('.tr-card').forEach(card => {
+        const show = !q || card.dataset.name.includes(q);
+        card.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      noResults.style.display = visible === 0 ? '' : 'none';
+    });
+  })();
+</script>
 {% endblock %}
