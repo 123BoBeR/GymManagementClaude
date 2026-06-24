@@ -39,7 +39,7 @@
           <th>Login</th>
           <th>Telefon</th>
           <th>Karnet</th>
-          <th>Ważny do</th>
+          <th>Aktywny do</th>
           <th>Status</th>
           <th></th>
         </tr>
@@ -60,8 +60,8 @@
               <span class="badge badge-day">Dzienny</span>
             {% endif %}
           </td>
-          <td class="text-muted">
-            {{ m.subscription_end.strftime('%d.%m.%Y') if m.subscription_end else '—' }}
+          <td class="text-muted text-capitalize">
+            {{ m.subscription_end | month_label }}
           </td>
           <td>
             {% if m.subscription_end and m.subscription_end >= today %}
@@ -157,7 +157,7 @@
           <p class="text-muted mb-3" style="font-size:.88rem">
             Klient: <strong>{{ m.first_name }} {{ m.last_name }}</strong>
             {% if m.subscription_end %}
-              - aktualnie ważny do <strong>{{ m.subscription_end.strftime('%d.%m.%Y') }}</strong>
+              - aktualnie aktywny do końca <strong class="text-capitalize">{{ m.subscription_end | month_label }}</strong>
             {% endif %}
           </p>
           <div class="mb-2">

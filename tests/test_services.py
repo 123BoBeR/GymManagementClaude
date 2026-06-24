@@ -82,11 +82,19 @@ class TestMemberService:
         assert setup['member'].first_name == 'Nowy'
         assert setup['member'].phone == '123'
 
-    def test_renew_subscription_sets_end(self, db, setup):
+    def test_renew_subscription_stacks_by_month(self, db, setup):
+        # aktywny do końca lipca → po odnowieniu miesięcznym do końca sierpnia
+        setup['member'].subscription_end = date(2026, 7, 31)
         new_end = MemberService.renew_subscription(setup['member'], 'monthly',
-                                                   from_date=date(2026, 1, 1))
-        assert new_end == date(2026, 1, 31)
+                                                   today=date(2026, 7, 10))
+        assert new_end == date(2026, 8, 31)
         assert setup['member'].subscription_type == 'monthly'
+
+    def test_renew_subscription_expired_resets_to_month(self, db, setup):
+        setup['member'].subscription_end = date(2026, 1, 31)
+        new_end = MemberService.renew_subscription(setup['member'], 'monthly',
+                                                   today=date(2026, 6, 24))
+        assert new_end == date(2026, 6, 30)
 
     def test_is_active_true_for_future_end(self, db, setup):
         setup['member'].subscription_end = date.today() + timedelta(days=5)

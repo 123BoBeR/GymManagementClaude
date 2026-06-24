@@ -70,9 +70,9 @@
               <span class="badge badge-day">Karnet dzienny</span>
             {% endif %}
           </dd>
-          <dt class="col-sm-4 text-muted fw-normal">Ważny do</dt>
-          <dd class="col-sm-8 fw-semibold">
-            {{ member.subscription_end.strftime('%d.%m.%Y') if member.subscription_end else '—' }}
+          <dt class="col-sm-4 text-muted fw-normal">Aktywny do końca</dt>
+          <dd class="col-sm-8 fw-semibold text-capitalize">
+            {{ member.subscription_end | month_label }}
           </dd>
           {% if days_left is not none %}
           <dt class="col-sm-4 text-muted fw-normal">Pozostało</dt>

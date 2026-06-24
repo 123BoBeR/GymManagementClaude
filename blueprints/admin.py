@@ -5,7 +5,8 @@ from extensions import db
 from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment, WaitlistEntry
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
-from services import PaymentService, UserService, MemberService, SubscriptionFactory
+from services import (PaymentService, UserService, MemberService,
+                      SubscriptionFactory, month_label as _month_label)
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 
@@ -162,8 +163,8 @@ def admin_member_new():
             last_name=last,
             phone=request.form.get('phone', ''),
             subscription_type=sub_type,
-            # Ważność liczona automatycznie od dziś wg typu karnetu
-            subscription_end=SubscriptionFactory.create(sub_type).end_date(),
+            # Ważność liczona automatycznie wg typu (model miesięczny)
+            subscription_end=SubscriptionFactory.create(sub_type).extend(None),
         )
         db.session.add(member)
         db.session.commit()
@@ -183,9 +184,9 @@ def admin_member_edit(id):
         old_type = member.subscription_type
         new_type = request.form.get('subscription_type', old_type)
         member.subscription_type = new_type
-        # Zmiana typu karnetu = przeliczenie ważności od dziś (bez ręcznych dat)
+        # Zmiana typu karnetu = przeliczenie ważności od bieżącego miesiąca
         if new_type != old_type:
-            member.subscription_end = SubscriptionFactory.create(new_type).end_date()
+            member.subscription_end = SubscriptionFactory.create(new_type).extend(None)
         db.session.commit()
         flash('Dane zaktualizowane.', 'success')
         return redirect(url_for('admin.admin_members'))
@@ -211,12 +212,10 @@ def admin_member_reset_password(id):
 def admin_member_renew(id):
     member = db.get_or_404(Member, id)
     sub_type = request.form.get('subscription_type', member.subscription_type)
-    # Stackuj cyklicznie od późniejszej z dat: dziś lub obecny koniec karnetu
-    today = date.today()
-    from_date = max(today, member.subscription_end) if member.subscription_end else today
-    new_end = MemberService.renew_subscription(member, sub_type, from_date=from_date)
-    flash(f'Karnet dla {member.first_name} {member.last_name} przedłużony do '
-          f'{new_end.strftime("%d.%m.%Y")}.', 'success')
+    # Model miesięczny: dolicza okres do bieżącej ważności (czerwiec + miesiąc = lipiec)
+    new_end = MemberService.renew_subscription(member, sub_type)
+    flash(f'Karnet dla {member.first_name} {member.last_name} przedłużony — '
+          f'aktywny do końca {_month_label(new_end)}.', 'success')
     return redirect(url_for('admin.admin_members'))
 
 

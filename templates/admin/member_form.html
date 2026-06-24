@@ -57,10 +57,10 @@
         <div class="form-text">
           <i class="bi bi-calendar-check me-1"></i>
           {% if member %}
-            Ważność: <strong>{{ member.subscription_end.strftime('%d.%m.%Y') if member.subscription_end else '—' }}</strong>.
-            Zmiana typu przeliczy datę końca od dziś.
+            Aktywny do końca: <strong class="text-capitalize">{{ member.subscription_end | month_label }}</strong>.
+            Zmiana typu przeliczy ważność od bieżącego miesiąca.
           {% else %}
-            Data ważności zostanie wyliczona automatycznie od dnia dodania.
+            Ważność zostanie wyliczona automatycznie (model miesięczny).
           {% endif %}
         </div>
       </div>

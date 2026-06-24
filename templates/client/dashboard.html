@@ -33,9 +33,9 @@
         <hr>
 
         <dl class="row mb-0" style="font-size:.88rem">
-          <dt class="col-6 text-muted fw-normal">Ważny do</dt>
-          <dd class="col-6 fw-semibold">
-            {{ member.subscription_end.strftime('%d.%m.%Y') if member.subscription_end else '—' }}
+          <dt class="col-6 text-muted fw-normal">Aktywny do końca</dt>
+          <dd class="col-6 fw-semibold text-capitalize">
+            {{ member.subscription_end | month_label }}
           </dd>
           {% if days_left is not none %}
           <dt class="col-6 text-muted fw-normal">Pozostało dni</dt>

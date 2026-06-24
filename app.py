@@ -32,6 +32,9 @@ def create_app(test_config=None):
     app.jinja_env.globals['enumerate'] = enumerate
     app.jinja_env.filters['enumerate'] = enumerate
 
+    from services import month_label
+    app.jinja_env.filters['month_label'] = month_label
+
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template('404.html'), 404

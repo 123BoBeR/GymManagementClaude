@@ -208,4 +208,14 @@ Eksport płatności do CSV (admin, parytet z eksportem klientów), live search +
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 83 testy*
+#### ✅ B27 · Model miesięczny karnetu — ZROBIONE
+Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym miesiącu albo nie".
+- `SubscriptionStrategy.extend(current_end, today)` — miesięczny +1 mies., roczny +12 mies., zawsze do końca miesiąca; aktywny → dolicza (czerwiec + miesiąc = lipiec), wygasły → od bieżącego miesiąca; day_pass = tylko dziś
+- UI bez konkretnych dat — filtr Jinja `month_label` pokazuje „lipiec 2026" zamiast „31.07.2026" (dashboard, profil, lista klientów, formularze, flash)
+- `renew_subscription` / tworzenie / edycja / odnowienie przepięte na `extend`
+- Zaktualizowane testy (subscription/services/admin). **86 testów.**
+**Pliki:** `services.py`, `app.py`, `blueprints/{admin,client}.py`, `templates/{client/dashboard,client/profile,admin/members,admin/member_form}.html`, `tests/{test_subscription,test_services,test_admin}.py`
+
+---
+
+*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 86 testów*

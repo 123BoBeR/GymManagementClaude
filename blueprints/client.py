@@ -2,7 +2,8 @@ from flask import Blueprint, render_template, redirect, url_for, request, sessio
 from extensions import db
 from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
-from services import BookingService, WaitlistService, PaymentService, MemberService
+from services import (BookingService, WaitlistService, PaymentService,
+                      MemberService, month_label)
 from datetime import date, datetime, timezone, timedelta
 
 bp = Blueprint('client', __name__, url_prefix='/client')
@@ -245,11 +246,8 @@ def client_subscription_renew():
     member = user.member
 
     sub_type = request.form.get('subscription_type', member.subscription_type)
-    # Stackuj od późniejszej z dat: dziś lub obecny koniec karnetu
-    current_end = member.subscription_end
-    from_date = max(date.today(), current_end) if current_end else date.today()
-
-    new_end = MemberService.renew_subscription(member, sub_type, from_date=from_date)
+    # Model miesięczny: dolicza okres do bieżącej ważności (cyklicznie)
+    new_end = MemberService.renew_subscription(member, sub_type)
 
     # Zapisz opłatę jako rozliczoną (completed) za bieżący miesiąc
     amount = PaymentService.amount_for(member)
@@ -261,6 +259,6 @@ def client_subscription_renew():
     ))
     db.session.commit()
 
-    flash(f'Karnet przedłużony do {new_end.strftime("%d.%m.%Y")} '
+    flash(f'Karnet przedłużony — aktywny do końca {month_label(new_end)} '
           f'({_sub_label(sub_type)}, {amount:.0f} zł).', 'success')
     return redirect(url_for('client.client_dashboard'))

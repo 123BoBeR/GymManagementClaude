@@ -30,10 +30,39 @@ def _slugify(text):
 BANK_ACCOUNT = "PL 12 3456 7890 1234 5678 9012 3456"
 
 
+# ── Pomocnicze: arytmetyka miesięcy ──────────────────────────────────────────
+
+def _add_months(d, n):
+    """Przesuwa datę o n miesięcy, ląduje na 1. dniu wynikowego miesiąca."""
+    m = d.month - 1 + n
+    y = d.year + m // 12
+    return date(y, m % 12 + 1, 1)
+
+
+def _end_of_month(d):
+    """Ostatni dzień miesiąca, w którym leży data d."""
+    return _add_months(d, 1) - timedelta(days=1)
+
+
+_PL_MONTHS = ['', 'styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec',
+              'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień']
+
+
+def month_label(d):
+    """Etykieta miesiąca, np. 'lipiec 2026' (zamiast konkretnej daty)."""
+    if not d:
+        return '—'
+    return f"{_PL_MONTHS[d.month]} {d.year}"
+
+
 # ── Strategy: typy karnetów ───────────────────────────────────────────────────
 
 class SubscriptionStrategy(ABC):
-    """Wspólny interfejs dla wszystkich typów karnetów."""
+    """Wspólny interfejs dla typów karnetów.
+
+    Model jest miesięczny: karnet jest aktywny w danym miesiącu albo nie —
+    `subscription_end` to zawsze ostatni dzień ostatniego opłaconego miesiąca.
+    """
     code = None
 
     @abstractmethod
@@ -45,16 +74,30 @@ class SubscriptionStrategy(ABC):
         ...
 
     @abstractmethod
-    def duration_days(self):
+    def extend(self, current_end, today=None):
+        """Zwraca nową datę ważności po dokupieniu jednego okresu.
+
+        Jeśli karnet jest jeszcze aktywny — dolicza okres do bieżącej ważności
+        (czerwiec + miesiąc = lipiec). Jeśli wygasł lub go nie ma — liczy od
+        bieżącego miesiąca.
+        """
         ...
 
-    def end_date(self, from_date=None):
-        from_date = from_date or date.today()
-        return from_date + timedelta(days=self.duration_days())
+
+class _MonthlyBased(SubscriptionStrategy):
+    """Karnet rozliczany w pełnych miesiącach (miesięczny, roczny)."""
+    months = 1
+
+    def extend(self, current_end, today=None):
+        today = today or date.today()
+        if current_end and current_end >= today:
+            return _end_of_month(_add_months(current_end, self.months))
+        return _end_of_month(_add_months(today, self.months - 1))
 
 
-class MonthlySubscription(SubscriptionStrategy):
+class MonthlySubscription(_MonthlyBased):
     code = 'monthly'
+    months = 1
 
     def label(self):
         return 'Miesięczny'
@@ -62,21 +105,16 @@ class MonthlySubscription(SubscriptionStrategy):
     def price(self):
         return 99.0
 
-    def duration_days(self):
-        return 30
 
-
-class AnnualSubscription(SubscriptionStrategy):
+class AnnualSubscription(_MonthlyBased):
     code = 'annual'
+    months = 12
 
     def label(self):
         return 'Roczny'
 
     def price(self):
         return 799.0
-
-    def duration_days(self):
-        return 365
 
 
 class DayPassSubscription(SubscriptionStrategy):
@@ -88,8 +126,9 @@ class DayPassSubscription(SubscriptionStrategy):
     def price(self):
         return 29.0
 
-    def duration_days(self):
-        return 1
+    def extend(self, current_end, today=None):
+        # Wejściówka jednodniowa — ważna tylko w dniu zakupu.
+        return today or date.today()
 
 
 # ── Factory ───────────────────────────────────────────────────────────────────
@@ -356,11 +395,15 @@ class MemberService:
         return True, "Dane zaktualizowane."
 
     @staticmethod
-    def renew_subscription(member, sub_type, from_date=None):
-        """Przedłuża karnet wg strategii (Strategy + Factory)."""
+    def renew_subscription(member, sub_type, today=None):
+        """Przedłuża karnet o jeden okres (Strategy + Factory).
+
+        Cyklicznie: jeśli karnet jeszcze aktywny — dolicza do bieżącej ważności,
+        w przeciwnym razie liczy od bieżącego miesiąca.
+        """
         strategy = SubscriptionFactory.create(sub_type)
         member.subscription_type = sub_type
-        member.subscription_end = strategy.end_date(from_date)
+        member.subscription_end = strategy.extend(member.subscription_end, today)
         db.session.commit()
         return member.subscription_end
 

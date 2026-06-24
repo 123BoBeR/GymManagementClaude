@@ -95,7 +95,8 @@ class TestClientCreation:
         }, follow_redirects=True)
         assert 'Login: e.nowak' in resp.data.decode()
         m = User.query.filter_by(username='e.nowak').first().member
-        assert m.subscription_end == date.today() + timedelta(days=30)
+        # nowy karnet miesięczny = aktywny do końca bieżącego miesiąca
+        assert m.subscription_end == SubscriptionFactory.create('monthly').extend(None)
 
     def test_create_annual_expiry(self, client, db):
         login_admin(client, db)
@@ -104,7 +105,7 @@ class TestClientCreation:
             'subscription_type': 'annual',
         }, follow_redirects=True)
         m = User.query.filter_by(username='a.roczny').first().member
-        assert m.subscription_end == date.today() + timedelta(days=365)
+        assert m.subscription_end == SubscriptionFactory.create('annual').extend(None)
 
     def test_create_rejects_short_password(self, client, db):
         login_admin(client, db)
@@ -125,20 +126,21 @@ class TestClientCreation:
             'first_name': 'K', 'last_name': 'Test', 'phone': '',
             'subscription_type': 'annual',
         }, follow_redirects=True)
-        assert db.session.get(Member, mid).subscription_end == date.today() + timedelta(days=365)
+        assert db.session.get(Member, mid).subscription_end == SubscriptionFactory.create('annual').extend(None)
 
     def test_renew_stacks_from_current_end(self, client, db):
         login_admin(client, db)
         u = make_user(db, 'k.renew', 'pass123', 'client')
         m = make_member(db, u)
-        future = date.today() + timedelta(days=10)
+        future = date.today() + timedelta(days=40)   # aktywny w przyszłym miesiącu
         m.subscription_end = future
         db.session.commit()
         mid = m.id
+        expected = SubscriptionFactory.create('monthly').extend(future)
         client.post(f'/admin/members/{mid}/renew', data={
             'subscription_type': 'monthly',
         }, follow_redirects=True)
-        assert db.session.get(Member, mid).subscription_end == future + timedelta(days=30)
+        assert db.session.get(Member, mid).subscription_end == expected
 
 
 class TestPaymentsExport:
