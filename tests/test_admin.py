@@ -142,6 +142,17 @@ class TestClientCreation:
         }, follow_redirects=True)
         assert db.session.get(Member, mid).subscription_end == expected
 
+    def test_renew_records_payment(self, client, db):
+        login_admin(client, db)
+        u = make_user(db, 'k.pay', 'pass123', 'client')
+        m = make_member(db, u)
+        db.session.commit()
+        mid = m.id
+        client.post(f'/admin/members/{mid}/renew', data={
+            'subscription_type': 'monthly',
+        }, follow_redirects=True)
+        assert Payment.query.filter_by(member_id=mid, status='completed').count() == 1
+
 
 class TestContact:
     def test_admin_can_add_and_delete(self, client, db):

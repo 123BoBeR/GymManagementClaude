@@ -4,7 +4,7 @@ from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
 from services import (BookingService, WaitlistService, PaymentService,
                       MemberService, month_label)
-from datetime import date, datetime, timezone, timedelta
+from datetime import date, timedelta
 
 bp = Blueprint('client', __name__, url_prefix='/client')
 
@@ -250,7 +250,6 @@ def _sub_label(sub_type):
 @bp.route('/subscription/renew', methods=['POST'])
 @role_required('client')
 def client_subscription_renew():
-    from models import Payment
     user = db.session.get(User, session['user_id'])
     member = user.member
 
@@ -258,15 +257,9 @@ def client_subscription_renew():
     # Model miesięczny: dolicza okres do bieżącej ważności (cyklicznie)
     new_end = MemberService.renew_subscription(member, sub_type)
 
-    # Zapisz opłatę jako rozliczoną (completed) za bieżący miesiąc
+    # Zapisz opłatę jako rozliczoną (upsert: bez duplikatu względem `initiate`)
     amount = PaymentService.amount_for(member)
-    db.session.add(Payment(
-        member_id=member.id, amount=amount,
-        month_year=date.today().strftime('%Y-%m'), status='completed',
-        transfer_number=PaymentService.generate_transfer_number(),
-        paid_at=datetime.now(timezone.utc),
-    ))
-    db.session.commit()
+    PaymentService.record_completed(member)
 
     flash(f'Karnet przedłużony — aktywny do końca {month_label(new_end)} '
           f'({_sub_label(sub_type)}, {amount:.0f} zł).', 'success')

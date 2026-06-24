@@ -267,8 +267,10 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 - Test: powtórne wywołanie nie tworzy duplikatów; uzupełnia tylko brakujące.
 **Pliki:** `blueprints/sessions.py`, `app.py` (CLI), `tests/test_sessions.py` (nowy)
 
-#### ⬜ B32 · Spójność płatności przy odnowieniu + unikalność — ODŁOŻONE (parować z B36)
-> Wymaga zmiany schematu (`UniqueConstraint`) + decyzji o znaczeniu `month_year` — najlepiej zrobić razem z migracjami (B36), nie na `drop_all`.
+#### 🟡 B32 · Spójność płatności przy odnowieniu + unikalność — CZĘŚCIOWO ZROBIONE
+**✅ Wynik (behawioralny, bez zmiany schematu):** `PaymentService.record_completed()` (upsert) — jeden miesiąc = jeden wpis; klient i admin renew rejestrują przychód tą samą ścieżką (admin renew wcześniej nie zapisywał nic → „darmowe" w raportach). **+4 testy.**
+**⬜ Pozostaje (→ B36):** `UniqueConstraint(member_id, month_year)` jako twarda gwarancja na poziomie DB — przez migrację. Residual: dwa odnowienia w tym samym miesiącu kalendarzowym = jeden wpis (model `month_year` = miesiąc kalendarzowy).
+**Pliki:** `services.py`, `blueprints/{client,admin}.py`, `tests/{test_payment,test_admin}.py`
 
 **Problem:** Klient odnawiając zapisuje `Payment` completed, admin odnawiając — nie zapisuje nic (odnowienie „darmowe" w raportach). Brak ograniczenia unikalności `Payment(member_id, month_year)` — możliwe duplikaty.
 **Zakres:**
@@ -392,4 +394,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **104 testy** · zrobione: B29–B31, B33, B34a, B35, B37 · odłożone: B32 (→B36), B34b*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **108 testów** · zrobione: B29–B31, B32 (behawioralnie), B33, B34a, B35, B37 · pozostaje: B32 constraint (→B36), B34b*

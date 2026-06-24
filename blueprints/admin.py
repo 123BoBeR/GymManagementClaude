@@ -215,6 +215,8 @@ def admin_member_renew(id):
     sub_type = request.form.get('subscription_type', member.subscription_type)
     # Model miesięczny: dolicza okres do bieżącej ważności (czerwiec + miesiąc = lipiec)
     new_end = MemberService.renew_subscription(member, sub_type)
+    # Spójność z odnowieniem przez klienta: rejestruj przychód (upsert)
+    PaymentService.record_completed(member)
     flash(f'Karnet dla {member.first_name} {member.last_name} przedłużony — '
           f'aktywny do końca {_month_label(new_end)}.', 'success')
     return redirect(url_for('admin.admin_members'))

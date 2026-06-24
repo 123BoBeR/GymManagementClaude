@@ -117,3 +117,25 @@ class TestConfirm:
         assert PaymentService.total_revenue() == 0.0
         PaymentService.confirm(data['payment_id'], member.id)
         assert PaymentService.total_revenue() == 99.0
+
+
+class TestRecordCompleted:
+    def test_creates_completed_payment(self, db, member):
+        p = PaymentService.record_completed(member, '2026-06')
+        assert p.status == 'completed'
+        assert p.paid_at is not None
+        assert p.amount == 99.0
+        assert p.transfer_number.startswith('TRF-')
+
+    def test_upserts_existing_pending(self, db, member):
+        _, data = PaymentService.initiate(member.id, '2026-06')   # pending
+        p = PaymentService.record_completed(member, '2026-06')
+        assert p.id == data['payment_id']        # ten sam wiersz, nie duplikat
+        assert p.status == 'completed'
+        assert Payment.query.filter_by(member_id=member.id, month_year='2026-06').count() == 1
+
+    def test_no_duplicate_on_repeat(self, db, member):
+        PaymentService.record_completed(member, '2026-06')
+        PaymentService.record_completed(member, '2026-06')
+        assert Payment.query.filter_by(member_id=member.id, month_year='2026-06').count() == 1
+        assert PaymentService.total_revenue() == 99.0

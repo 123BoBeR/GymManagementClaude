@@ -389,6 +389,28 @@ class PaymentService:
         return True, "Płatność zatwierdzona."
 
     @staticmethod
+    def record_completed(member, month_year=None):
+        """Zapisuje rozliczoną płatność za miesiąc (upsert).
+
+        Jeśli płatność za ten miesiąc już istnieje (np. pending z `initiate`),
+        oznacza ją jako completed zamiast tworzyć duplikat. Dzięki temu jeden
+        miesiąc = jeden wpis płatności, niezależnie od ścieżki (klient/admin).
+        """
+        month_year = month_year or date.today().strftime('%Y-%m')
+        payment = Payment.query.filter_by(
+            member_id=member.id, month_year=month_year).first()
+        if payment is None:
+            payment = Payment(member_id=member.id, month_year=month_year)
+            db.session.add(payment)
+        payment.amount = PaymentService.amount_for(member)
+        payment.status = 'completed'
+        if not payment.transfer_number:
+            payment.transfer_number = PaymentService.generate_transfer_number()
+        payment.paid_at = datetime.now(timezone.utc)
+        db.session.commit()
+        return payment
+
+    @staticmethod
     def total_revenue():
         completed = Payment.query.filter_by(status='completed').all()
         return sum(p.amount for p in completed)
