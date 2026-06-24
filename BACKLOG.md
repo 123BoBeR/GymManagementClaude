@@ -315,7 +315,8 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **Zakres:** `Flask-Limiter` na `/login` (np. 5 prób/min/IP), czytelny komunikat po przekroczeniu.
 **Pliki:** `app.py`, `blueprints/auth.py`, `requirements.txt`
 
-#### ⬜ B39 · Serwer WSGI + Docker + CI — DO ZROBIENIA
+#### ⬜ B39 · Serwer WSGI + Docker + CI — DO ZROBIENIA · 📌 NA SAM KONIEC (wykończeniówka)
+> **Decyzja (2026-06-25):** Docker/konteneryzacja to wykończeniówka — robimy ją jako **ostatnie zadanie projektu**, po wszystkich funkcjach i poprawkach. Nie zaczynać wcześniej.
 **Zakres:** `waitress`/`gunicorn` zamiast `app.run`, `Dockerfile` + `docker-compose` (z Postgresem), GitHub Actions uruchamiające `pytest` na push.
 **Pliki:** `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `requirements.txt`, `README.md`
 
@@ -323,13 +324,13 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 ### SEKCJA 10 — Nowe funkcje · **P1–P2**
 
-#### ⬜ B40 · Rejestracja klienta (self-signup) — DO ZROBIENIA · P1
-Publiczna trasa `/register` tworząca `User` + `Member` (wybór karnetu, walidacja, auto-login). Dziś klientów zakłada tylko admin.
-**Pliki:** `blueprints/auth.py`, `templates/register.html`, `services.py`, `tests/`
+#### ✅ B40 · Rejestracja klienta (self-signup) — ZROBIONE · P1
+**✅ Wynik:** Publiczna `/register` → `UserService.register_client()` (walidacja, auto-login wg konwencji, karnet na pierwszy okres, auto-zalogowanie). Linki na stronie logowania. **+4 testy.**
+**Pliki:** `blueprints/auth.py`, `services.py`, `templates/{register,login}.html`, `tests/test_auth.py`
 
-#### ⬜ B41 · Reset hasła („zapomniałem hasła") — DO ZROBIENIA · P1
-Token jednorazowy + strona ustawienia nowego hasła (na start: token w bazie z TTL; e-mail stub/log). Dziś jest tylko zmiana ze starym hasłem i reset przez admina.
-**Pliki:** `models.py`, `blueprints/auth.py`, `templates/`, `tests/`
+#### ✅ B41 · Reset hasła („zapomniałem hasła") — ZROBIONE · P1
+**✅ Wynik:** Model `PasswordResetToken` (token jednorazowy, TTL 60 min) + `/forgot-password` (anty-enumeracja) i `/reset-password/<token>`. Brak e-maila → link pokazywany w devie (w prod do wysłania mailem). Migracja `ade5177d6fd1`. **+5 testów.**
+**Pliki:** `models.py`, `services.py`, `blueprints/auth.py`, `templates/{forgot,reset}_password.html`, `templates/login.html`, `migrations/`, `tests/test_auth.py`
 
 #### ⬜ B42 · Warstwa powiadomień (pod Observer) — DO ZROBIENIA · P1
 Model `Notification` + „dzwoneczek" w UI; podpięcie pod istniejący Observer: **awans z listy oczekujących**, **wygasający karnet (≤7 dni)**, **potwierdzenie płatności**. Awans z kolejki jest dziś *cichy*.
@@ -393,4 +394,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **109 testów** · zrobione: B29–B33, B34a, B35, B36, B37 · pozostaje: B34b, B38–B49*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **118 testów** · zrobione: B29–B33, B34a, B35–B37, B40, B41 · w toku: B42 · pozostaje: B34b, B38–B39 (📌 koniec), B43–B49*

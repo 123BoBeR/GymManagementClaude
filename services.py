@@ -11,12 +11,14 @@ Zebrane w jednym miejscu wzorce wykorzystane w projekcie:
 """
 
 import random
+import secrets
 import unicodedata
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone, timedelta
 
 from extensions import db
-from models import User, Member, GymClass, ClassSession, Booking, WaitlistEntry, Payment
+from models import (User, Member, GymClass, ClassSession, Booking, WaitlistEntry,
+                    Payment, PasswordResetToken)
 
 
 def _slugify(text):
@@ -492,6 +494,39 @@ class UserService:
         return candidate
 
     @staticmethod
+    def register_client(first_name, last_name, password, phone='', sub_type='monthly'):
+        """Self-signup klienta. Zwraca (ok, result).
+
+        result = utworzony User (sukces) albo komunikat błędu (str).
+        Login generowany automatycznie wg konwencji aplikacji; karnet aktywny
+        na pierwszy okres (parytet z zakładaniem klienta przez admina).
+        """
+        first = (first_name or '').strip()
+        last = (last_name or '').strip()
+        if not first or not last:
+            return False, "Imię i nazwisko są wymagane."
+        if len(password or '') < 6:
+            return False, "Hasło musi mieć co najmniej 6 znaków."
+        try:
+            strategy = SubscriptionFactory.create(sub_type)
+        except ValueError:
+            return False, "Nieprawidłowy typ karnetu."
+
+        username = UserService.generate_client_username(first, last)
+        user = User(username=username, role='client')
+        user.set_password(password)
+        db.session.add(user)
+        db.session.flush()
+        member = Member(
+            user_id=user.id, first_name=first, last_name=last,
+            phone=(phone or '').strip(), subscription_type=sub_type,
+            subscription_end=strategy.extend(None),
+        )
+        db.session.add(member)
+        db.session.commit()
+        return True, user
+
+    @staticmethod
     def change_password(user, current, new, confirm):
         if not user.check_password(current):
             return False, "Aktualne hasło jest nieprawidłowe."
@@ -502,3 +537,41 @@ class UserService:
         user.set_password(new)
         db.session.commit()
         return True, "Hasło zmienione pomyślnie."
+
+    @staticmethod
+    def create_reset_token(username, ttl_minutes=60):
+        """Tworzy jednorazowy token resetu hasła. Zwraca token albo None.
+
+        Zwraca None tylko gdy użytkownik nie istnieje — wołający NIE powinien
+        ujawniać tego użytkownikowi (ochrona przed enumeracją kont).
+        """
+        user = User.query.filter_by(username=username).first()
+        if user is None:
+            return None
+        token = secrets.token_urlsafe(32)
+        db.session.add(PasswordResetToken(
+            user_id=user.id, token=token,
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes),
+        ))
+        db.session.commit()
+        return token
+
+    @staticmethod
+    def reset_password_with_token(token, new, confirm):
+        """Ustawia nowe hasło na podstawie tokenu. Zwraca (ok, komunikat)."""
+        prt = PasswordResetToken.query.filter_by(token=token, used=False).first()
+        if prt is None:
+            return False, "Link resetujący jest nieprawidłowy lub został już użyty."
+        expires = prt.expires_at
+        if expires.tzinfo is None:               # SQLite zwraca datę naiwną
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < datetime.now(timezone.utc):
+            return False, "Link resetujący wygasł. Poproś o nowy."
+        if len(new or '') < 6:
+            return False, "Nowe hasło musi mieć co najmniej 6 znaków."
+        if new != confirm:
+            return False, "Hasła nie są identyczne."
+        prt.user.set_password(new)
+        prt.used = True
+        db.session.commit()
+        return True, "Hasło zostało zmienione. Możesz się zalogować."

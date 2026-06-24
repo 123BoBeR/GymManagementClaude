@@ -20,6 +20,18 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
 
 
+class PasswordResetToken(db.Model):
+    __tablename__ = 'password_reset_tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    token = db.Column(db.String(64), unique=True, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False)
+
+    user = db.relationship(
+        'User', backref=db.backref('reset_tokens', cascade='all, delete-orphan'))
+
+
 class Member(db.Model):
     __tablename__ = 'members'
     id = db.Column(db.Integer, primary_key=True)

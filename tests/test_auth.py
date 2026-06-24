@@ -1,5 +1,6 @@
 """Testy autoryzacji i kontroli dostępu."""
 import pytest
+from models import User
 from tests.conftest import make_user, make_member, make_trainer
 
 
@@ -38,6 +39,98 @@ class TestLogin:
         resp = logout(client)
         # Po wylogowaniu powinien wrócić do logowania
         assert b'Zaloguj' in resp.data
+
+
+class TestRegistration:
+    def test_register_creates_account_and_logs_in(self, client, db):
+        resp = client.post('/register', data={
+            'first_name': 'Adam', 'last_name': 'Nowak', 'phone': '500',
+            'password': 'haslo123', 'subscription_type': 'monthly',
+        }, follow_redirects=True)
+        assert 'a.nowak' in resp.data.decode()          # login pokazany we flashu
+        u = User.query.filter_by(username='a.nowak').first()
+        assert u is not None and u.role == 'client'
+        assert u.member is not None
+        assert u.member.subscription_end is not None     # karnet aktywny
+
+    def test_register_short_password_rejected(self, client, db):
+        resp = client.post('/register', data={
+            'first_name': 'Ewa', 'last_name': 'Kort', 'password': '123',
+            'subscription_type': 'monthly',
+        }, follow_redirects=True)
+        assert '6 znaków' in resp.data.decode()
+        assert User.query.filter_by(username='e.kort').first() is None
+
+    def test_register_collision_generates_unique_login(self, client, db):
+        client.post('/register', data={
+            'first_name': 'Jan', 'last_name': 'Kowalski', 'password': 'haslo123',
+            'subscription_type': 'monthly',
+        }, follow_redirects=True)
+        client.get('/logout')
+        client.post('/register', data={
+            'first_name': 'Jan', 'last_name': 'Kowalski', 'password': 'haslo123',
+            'subscription_type': 'monthly',
+        }, follow_redirects=True)
+        assert User.query.filter_by(role='client').count() == 2
+        assert User.query.filter_by(username='j.kowalski').first() is not None
+        assert User.query.filter_by(username='ja.kowalski').first() is not None
+
+    def test_register_invalid_subscription_rejected(self, client, db):
+        resp = client.post('/register', data={
+            'first_name': 'X', 'last_name': 'Y', 'password': 'haslo123',
+            'subscription_type': 'bogus',
+        }, follow_redirects=True)
+        assert 'karnet' in resp.data.decode().lower()
+
+
+class TestPasswordReset:
+    def test_forgot_shows_link_for_existing_user(self, client, db):
+        make_user(db, 'reset.me', 'oldpass', 'client')
+        db.session.commit()
+        resp = client.post('/forgot-password', data={'username': 'reset.me'},
+                           follow_redirects=True)
+        assert '/reset-password/' in resp.data.decode()
+
+    def test_forgot_unknown_user_no_link(self, client, db):
+        resp = client.post('/forgot-password', data={'username': 'nieistnieje'},
+                           follow_redirects=True)
+        body = resp.data.decode()
+        assert '/reset-password/' not in body          # brak linku
+        assert 'konto istnieje' in body                # komunikat jednakowy
+
+    def test_reset_changes_password(self, client, db):
+        from services import UserService
+        u = make_user(db, 'reset.ok', 'oldpass', 'client')
+        db.session.commit()
+        token = UserService.create_reset_token('reset.ok')
+        resp = client.post(f'/reset-password/{token}', data={
+            'new_password': 'noweHaslo', 'confirm_password': 'noweHaslo',
+        }, follow_redirects=True)
+        assert 'zmienione' in resp.data.decode().lower()
+        assert db.session.get(User, u.id).check_password('noweHaslo')
+
+    def test_token_single_use(self, db):
+        from services import UserService
+        make_user(db, 'reset.once', 'oldpass', 'client')
+        db.session.commit()
+        token = UserService.create_reset_token('reset.once')
+        ok1, _ = UserService.reset_password_with_token(token, 'haslo1', 'haslo1')
+        ok2, _ = UserService.reset_password_with_token(token, 'haslo2', 'haslo2')
+        assert ok1 is True and ok2 is False
+
+    def test_expired_token_rejected(self, db):
+        from datetime import datetime, timezone, timedelta
+        from models import PasswordResetToken
+        from services import UserService
+        u = make_user(db, 'reset.exp', 'oldpass', 'client')
+        db.session.commit()
+        db.session.add(PasswordResetToken(
+            user_id=u.id, token='expired-token',
+            expires_at=datetime.now(timezone.utc) - timedelta(minutes=1)))
+        db.session.commit()
+        ok, msg = UserService.reset_password_with_token('expired-token', 'haslo1', 'haslo1')
+        assert ok is False
+        assert 'wygas' in msg.lower()
 
 
 class TestHardening:

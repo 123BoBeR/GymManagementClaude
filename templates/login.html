@@ -66,6 +66,13 @@
       </button>
     </form>
 
+    <p class="text-center text-muted mt-3 mb-1" style="font-size:.84rem">
+      Nie masz konta? <a href="{{ url_for('auth.register') }}" style="color:#e94560;text-decoration:none;font-weight:600">Zarejestruj się</a>
+    </p>
+    <p class="text-center mb-0" style="font-size:.82rem">
+      <a href="{{ url_for('auth.forgot_password') }}" style="color:#64748b;text-decoration:none">Zapomniałeś hasła?</a>
+    </p>
+
     <hr class="my-4">
     <p class="text-muted mb-2" style="font-size:.78rem; text-align:center">Konta testowe</p>
     <table class="hint-table w-100">
