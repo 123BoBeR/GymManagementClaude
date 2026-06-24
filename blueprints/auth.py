@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from extensions import db
 from models import User, ContactOption
-from services import UserService, SubscriptionFactory
+from services import UserService, SubscriptionFactory, NotificationService
 
 bp = Blueprint('auth', __name__)
 
@@ -106,6 +106,22 @@ def change_password():
         if ok:
             return redirect(url_for('auth.index'))
     return render_template('change_password.html')
+
+
+@bp.route('/notifications')
+def notifications():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    notes = NotificationService.for_user(session['user_id'])
+    return render_template('notifications.html', notes=notes)
+
+
+@bp.route('/notifications/read', methods=['POST'])
+def notifications_read():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    NotificationService.mark_all_read(session['user_id'])
+    return redirect(url_for('auth.notifications'))
 
 
 @bp.route('/contact')

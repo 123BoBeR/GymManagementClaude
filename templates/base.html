@@ -246,6 +246,12 @@
     {% endif %}
 
     <div class="sb-section">Pomoc</div>
+    <a href="/notifications" class="nav-link {% if request.path == '/notifications' %}active{% endif %}">
+      <i class="bi bi-bell"></i> Powiadomienia
+      {% if nav_unread_count and nav_unread_count > 0 %}
+        <span class="badge bg-danger ms-auto">{{ nav_unread_count }}</span>
+      {% endif %}
+    </a>
     <a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %}">
       <i class="bi bi-telephone"></i> Kontakt
     </a>

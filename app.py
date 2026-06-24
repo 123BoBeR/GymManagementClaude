@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, session
 from dotenv import load_dotenv
 from extensions import db, csrf, migrate
 from blueprints.auth import bp as auth_bp
@@ -56,6 +56,14 @@ def create_app(test_config=None):
 
     from services import month_label
     app.jinja_env.filters['month_label'] = month_label
+
+    @app.context_processor
+    def inject_nav_notifications():
+        uid = session.get('user_id')
+        if not uid:
+            return {'nav_unread_count': 0}
+        from services import NotificationService
+        return {'nav_unread_count': NotificationService.unread_count(uid)}
 
     @app.after_request
     def _security_headers(resp):

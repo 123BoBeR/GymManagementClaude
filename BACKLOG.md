@@ -332,9 +332,9 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** Model `PasswordResetToken` (token jednorazowy, TTL 60 min) + `/forgot-password` (anty-enumeracja) i `/reset-password/<token>`. Brak e-maila → link pokazywany w devie (w prod do wysłania mailem). Migracja `ade5177d6fd1`. **+5 testów.**
 **Pliki:** `models.py`, `services.py`, `blueprints/auth.py`, `templates/{forgot,reset}_password.html`, `templates/login.html`, `migrations/`, `tests/test_auth.py`
 
-#### ⬜ B42 · Warstwa powiadomień (pod Observer) — DO ZROBIENIA · P1
-Model `Notification` + „dzwoneczek" w UI; podpięcie pod istniejący Observer: **awans z listy oczekujących**, **wygasający karnet (≤7 dni)**, **potwierdzenie płatności**. Awans z kolejki jest dziś *cichy*.
-**Pliki:** `models.py`, `services.py`, `blueprints/*`, `templates/base.html`, `tests/`
+#### ✅ B42 · Warstwa powiadomień (pod Observer) — ZROBIONE · P1
+**✅ Wynik:** Model `Notification` + `NotificationService` (push/for_user/unread_count/mark_all_read/notify_expiring). Podpięcia: **awans z kolejki** (Observer — koniec „cichego" awansu), **potwierdzenie płatności** (`PaymentService.confirm`), **wygasający karnet ≤7 dni** (dashboard, z dedupem). „Dzwonek" z licznikiem w sidebarze (context processor) + strona `/notifications` z „oznacz przeczytane". Migracja `ece940d7a6fe`. **+7 testów.**
+**Pliki:** `models.py`, `services.py`, `app.py`, `blueprints/{auth,client}.py`, `templates/{base,notifications}.html`, `migrations/`, `tests/test_notifications.py`
 
 #### ⬜ B43 · Historia obecności klienta — DO ZROBIENIA · P2
 Widok „Moja frekwencja" (był/nieobecny per sesja, % obecności). Trener oznacza, klient dziś tego nie widzi.
@@ -394,4 +394,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **118 testów** · zrobione: B29–B33, B34a, B35–B37, B40, B41 · w toku: B42 · pozostaje: B34b, B38–B39 (📌 koniec), B43–B49*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **125 testów** · zrobione: B29–B33, B34a, B35–B37, B40–B42 · pozostaje: B34b, B38, B43–B49, B39 (📌 sam koniec)*

@@ -18,7 +18,7 @@ from datetime import date, datetime, timezone, timedelta
 
 from extensions import db
 from models import (User, Member, GymClass, ClassSession, Booking, WaitlistEntry,
-                    Payment, PasswordResetToken)
+                    Payment, PasswordResetToken, Notification)
 
 
 def _slugify(text):
@@ -179,6 +179,17 @@ class WaitlistObserver(BookingObserver):
             status='confirmed',
         ))
         promoted_member_id = nxt.member_id
+
+        # Powiadom awansowanego klienta (wcześniej awans był „cichy").
+        member = db.session.get(Member, promoted_member_id)
+        cs = db.session.get(ClassSession, session_id)
+        if member and cs:
+            NotificationService.push(
+                member.user_id,
+                f'Zwolniło się miejsce — masz potwierdzoną rezerwację na '
+                f'{cs.gym_class.name} ({cs.session_date.strftime("%d.%m.%Y")}).',
+                icon='check-circle', url='/client/bookings')
+
         db.session.delete(nxt)
         return promoted_member_id
 
@@ -387,6 +398,13 @@ class PaymentService:
             return False, "Ta płatność jest już zatwierdzona."
         payment.status = 'completed'
         payment.paid_at = datetime.now(timezone.utc)
+        member = db.session.get(Member, payment.member_id)
+        if member:
+            NotificationService.push(
+                member.user_id,
+                f'Płatność {payment.amount:.0f} zł za {payment.month_year} '
+                f'została potwierdzona.',
+                icon='check-circle', url='/client/payments')
         db.session.commit()
         return True, "Płatność zatwierdzona."
 
@@ -416,6 +434,54 @@ class PaymentService:
     def total_revenue():
         completed = Payment.query.filter_by(status='completed').all()
         return sum(p.amount for p in completed)
+
+
+# ── Service Layer: powiadomienia ─────────────────────────────────────────────
+
+class NotificationService:
+    @staticmethod
+    def push(user_id, message, icon='bell', url=None):
+        """Dodaje powiadomienie do sesji DB (bez commitu — robi to wołający)."""
+        if not user_id:
+            return None
+        note = Notification(user_id=user_id, message=message, icon=icon, url=url)
+        db.session.add(note)
+        return note
+
+    @staticmethod
+    def for_user(user_id, limit=20):
+        return (Notification.query.filter_by(user_id=user_id)
+                .order_by(Notification.created_at.desc()).limit(limit).all())
+
+    @staticmethod
+    def unread_count(user_id):
+        return Notification.query.filter_by(user_id=user_id, read=False).count()
+
+    @staticmethod
+    def mark_all_read(user_id):
+        Notification.query.filter_by(user_id=user_id, read=False).update({'read': True})
+        db.session.commit()
+
+    @staticmethod
+    def notify_expiring(member, days_left):
+        """Powiadomienie o wygasającym karnecie (≤7 dni), bez duplikatów.
+
+        Nie tworzy kolejnego, jeśli istnieje już nieprzeczytane powiadomienie
+        tego typu (klucz: ikona 'hourglass-split').
+        """
+        if days_left is None or days_left < 0 or days_left > 7:
+            return None
+        existing = Notification.query.filter_by(
+            user_id=member.user_id, read=False, icon='hourglass-split').first()
+        if existing:
+            return None
+        dni = 'dzień' if days_left == 1 else 'dni'
+        note = NotificationService.push(
+            member.user_id,
+            f'Twój karnet wygasa za {days_left} {dni} — pamiętaj o przedłużeniu.',
+            icon='hourglass-split', url='/client/')
+        db.session.commit()
+        return note
 
 
 # ── Service Layer: członkowie ────────────────────────────────────────────────

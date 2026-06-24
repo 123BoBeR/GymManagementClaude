@@ -3,7 +3,7 @@ from extensions import db
 from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
 from services import (BookingService, WaitlistService, PaymentService,
-                      MemberService, month_label)
+                      MemberService, NotificationService, month_label)
 from datetime import date, timedelta
 
 bp = Blueprint('client', __name__, url_prefix='/client')
@@ -19,6 +19,7 @@ def client_dashboard():
     member = user.member
     subscription_active = MemberService.is_active(member)
     days_left = MemberService.days_left(member)
+    NotificationService.notify_expiring(member, days_left)
 
     # nadchodzące sesje w tym tygodniu (najbliższe 7 dni)
     today = date.today()
