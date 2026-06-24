@@ -40,6 +40,21 @@ class TestLogin:
         assert b'Zaloguj' in resp.data
 
 
+class TestHardening:
+    def test_security_headers_present(self, client, db):
+        resp = client.get('/login')
+        assert resp.headers.get('X-Content-Type-Options') == 'nosniff'
+        assert resp.headers.get('X-Frame-Options') == 'SAMEORIGIN'
+        assert resp.headers.get('Referrer-Policy') == 'same-origin'
+
+    def test_secret_key_required_in_production(self, monkeypatch):
+        monkeypatch.setenv('FLASK_ENV', 'production')
+        monkeypatch.delenv('SECRET_KEY', raising=False)
+        from app import create_app
+        with pytest.raises(RuntimeError):
+            create_app()
+
+
 class TestRoleAccess:
     def test_client_cannot_access_admin(self, client, db):
         u = make_user(db, 'klient1', 'pass', 'client')

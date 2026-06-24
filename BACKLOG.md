@@ -297,19 +297,18 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 ### SEKCJA 9 — Gotowość produkcyjna i bezpieczeństwo · **P1**
 
-#### ⬜ B35 · Debug i SECRET_KEY za zmiennymi środowiskowymi — DO ZROBIENIA
-**Problem:** `app.run(debug=True)` na sztywno (RCE przez konsolę Werkzeug w produkcji); `SECRET_KEY` ma cichy fallback `'dev-secret-change-me'`.
-**Zakres:** `FLASK_DEBUG` z env (domyślnie wyłączony); fail-fast / ostrzeżenie gdy brak `SECRET_KEY` w trybie nie-dev.
-**Pliki:** `app.py`, `.env.example`, `README.md`
+#### ✅ B35 · Debug i SECRET_KEY za zmiennymi środowiskowymi — ZROBIONE
+**✅ Wynik:** `debug` czytany z `FLASK_DEBUG` (domyślnie wyłączony); brak `SECRET_KEY` przy `FLASK_ENV=production` → `RuntimeError` na starcie (dev nadal ma fallback). **+1 test.**
+**Pliki:** `app.py`, `.env.example`, `tests/test_auth.py`
 
 #### ⬜ B36 · Migracje bazy (Flask-Migrate / Alembic) — DO ZROBIENIA
 **Problem:** Tylko `db.create_all()` — każda zmiana schematu wymaga ręcznego dropa. Blokuje bezpieczny rozwój.
 **Zakres:** `Flask-Migrate`, `flask db init`, pierwsza migracja z aktualnego schematu, instrukcja w README.
 **Pliki:** `requirements.txt`, `app.py`, `migrations/`, `README.md`
 
-#### ⬜ B37 · Hardening sesji i nagłówków — DO ZROBIENIA
-**Zakres:** `SESSION_COOKIE_SECURE/SAMESITE/HTTPONLY`, nagłówki bezpieczeństwa (X-Frame-Options, CSP — Flask-Talisman lub ręcznie), wymuszenie HTTPS w produkcji.
-**Pliki:** `app.py`, `requirements.txt`
+#### ✅ B37 · Hardening sesji i nagłówków — ZROBIONE
+**✅ Wynik:** `SESSION_COOKIE_HTTPONLY=True`, `SAMESITE=Lax`, `SECURE` w produkcji; nagłówki `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` przez `after_request`. **+1 test.**
+**Pliki:** `app.py`, `tests/test_auth.py`
 
 #### ⬜ B38 · Rate-limiting logowania — DO ZROBIENIA
 **Zakres:** `Flask-Limiter` na `/login` (np. 5 prób/min/IP), czytelny komunikat po przekroczeniu.
@@ -393,4 +392,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **102 testy** · P0 zrobione: B29, B30, B31, B33, B34a · odłożone: B32 (→B36), B34b*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **104 testy** · zrobione: B29–B31, B33, B34a, B35, B37 · odłożone: B32 (→B36), B34b*
