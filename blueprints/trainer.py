@@ -26,7 +26,7 @@ def trainer_dashboard():
     total_members = len({
         b.member_id
         for c in approved_classes
-        for s in c.sessions
+        for s in c.sessions if not s.cancelled
         for b in s.bookings
         if b.status == 'confirmed'
     })
@@ -139,6 +139,9 @@ def trainer_attendance(session_id):
         return redirect(url_for('trainer.trainer_sessions'))
 
     if request.method == 'POST':
+        if class_session.session_date > date.today():
+            flash('Nie można oznaczać obecności dla przyszłych sesji.', 'warning')
+            return redirect(url_for('trainer.trainer_sessions'))
         bookings = Booking.query.filter_by(session_id=session_id, status='confirmed').all()
         for b in bookings:
             val = request.form.get(f'attended_{b.id}')
@@ -155,6 +158,31 @@ def trainer_attendance(session_id):
     bookings = Booking.query.filter_by(session_id=session_id, status='confirmed').all()
     return render_template('trainer/attendance.html', trainer=trainer,
                            class_session=class_session, bookings=bookings)
+
+
+@bp.route('/sessions/<int:id>/cancel', methods=['POST'])
+@role_required('trainer')
+def trainer_session_cancel(id):
+    user = db.session.get(User, session['user_id'])
+    trainer = user.trainer
+    class_session = db.get_or_404(ClassSession, id)
+
+    if class_session.gym_class.trainer_id != trainer.id:
+        flash('Brak dostępu do tej sesji.', 'danger')
+        return redirect(url_for('trainer.trainer_sessions'))
+    if class_session.session_date < date.today():
+        flash('Nie można odwołać minionej sesji.', 'warning')
+        return redirect(url_for('trainer.trainer_sessions'))
+    if class_session.cancelled:
+        flash('Ta sesja jest już odwołana.', 'info')
+        return redirect(url_for('trainer.trainer_sessions'))
+
+    # Świadomie NIE awansujemy listy oczekujących — sesja przestaje istnieć.
+    class_session.cancelled = True
+    db.session.commit()
+    flash(f'Sesja {class_session.session_date.strftime("%d.%m.%Y")} '
+          f'({class_session.gym_class.name}) odwołana.', 'success')
+    return redirect(url_for('trainer.trainer_sessions'))
 
 
 @bp.route('/classes/<int:id>/edit', methods=['GET', 'POST'])
@@ -208,6 +236,8 @@ def trainer_class_members(id):
 
     rows = {}
     for s in gym_class.sessions:
+        if s.cancelled:
+            continue
         for b in s.bookings:
             if b.status != 'confirmed':
                 continue
@@ -245,7 +275,7 @@ def trainer_profile():
 
     approved = [c for c in trainer.classes if c.status == 'approved']
     total_members = len({
-        b.member_id for c in approved for s in c.sessions
+        b.member_id for c in approved for s in c.sessions if not s.cancelled
         for b in s.bookings if b.status == 'confirmed'
     })
     return render_template('trainer/profile.html', trainer=trainer,
@@ -262,6 +292,8 @@ def trainer_members():
         if c.status != 'approved':
             continue
         for s in c.sessions:
+            if s.cancelled:
+                continue
             for b in s.bookings:
                 if b.status == 'confirmed':
                     if b.member_id not in members_dict:

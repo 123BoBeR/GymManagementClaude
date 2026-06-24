@@ -48,11 +48,22 @@
             {% endif %}
           </td>
           <td class="pe-3">
-            <a href="/trainer/sessions/{{ s.id }}/attendance"
-               class="btn btn-sm {% if s.session_date <= today %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
-              <i class="bi bi-person-check me-1"></i>
-              {% if s.session_date <= today %}Oznacz{% else %}Podgląd{% endif %}
-            </a>
+            <div class="d-flex gap-1">
+              <a href="/trainer/sessions/{{ s.id }}/attendance"
+                 class="btn btn-sm {% if s.session_date <= today %}btn-outline-primary{% else %}btn-outline-secondary{% endif %}">
+                <i class="bi bi-person-check me-1"></i>
+                {% if s.session_date <= today %}Oznacz{% else %}Podgląd{% endif %}
+              </a>
+              {% if s.session_date >= today %}
+              <form action="/trainer/sessions/{{ s.id }}/cancel" method="POST" class="d-inline"
+                    onsubmit="return confirm('Odwołać sesję {{ s.session_date.strftime('%d.%m.%Y') }} ({{ s.gym_class.name }})? Zapisani klienci stracą tę sesję.')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-danger" title="Odwołaj sesję">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}

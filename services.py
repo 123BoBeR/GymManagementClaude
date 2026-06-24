@@ -204,6 +204,13 @@ class BookingService:
         if class_session.session_date < date.today():
             return False, "Nie można rezerwować przeszłych sesji."
 
+        member = db.session.get(Member, member_id)
+        if member is None:
+            return False, "Klient nie istnieje."
+        if not MemberService.is_active(member, class_session.session_date):
+            return False, ("Twój karnet nie obejmuje tej daty — "
+                           "przedłuż karnet, aby się zapisać.")
+
         confirmed = Booking.query.filter_by(session_id=session_id, status='confirmed').count()
         if confirmed >= gym_class.max_capacity:
             return False, "Brak wolnych miejsc na tę sesję."
@@ -263,6 +270,13 @@ class BookingService:
 class WaitlistService:
     @staticmethod
     def join(member_id, session_id):
+        class_session = db.session.get(ClassSession, session_id)
+        if class_session is None:
+            return False, "Sesja nie istnieje."
+        member = db.session.get(Member, member_id)
+        if member is None or not MemberService.is_active(member, class_session.session_date):
+            return False, ("Twój karnet nie obejmuje tej daty — "
+                           "przedłuż karnet, aby dołączyć do kolejki.")
         if WaitlistEntry.query.filter_by(member_id=member_id, session_id=session_id).first():
             return False, "Już jesteś na liście oczekujących."
         db.session.add(WaitlistEntry(member_id=member_id, session_id=session_id))

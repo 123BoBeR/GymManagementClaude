@@ -1,5 +1,6 @@
 """Testy WaitlistService oraz wzorca Observer (awans z kolejki)."""
 import pytest
+from datetime import date, timedelta
 from models import Booking, WaitlistEntry
 from services import WaitlistService, BookingService
 from tests.conftest import (
@@ -52,6 +53,13 @@ class TestWaitlistService:
 
     def test_position_none_when_absent(self, db, setup):
         assert WaitlistService.position(setup['member'].id, setup['session'].id) is None
+
+    def test_join_inactive_subscription_rejected(self, db, setup):
+        setup['member'].subscription_end = date.today() - timedelta(days=1)
+        db.session.commit()
+        ok, msg = WaitlistService.join(setup['member'].id, setup['session'].id)
+        assert ok is False
+        assert WaitlistEntry.query.count() == 0
 
 
 class TestWaitlistObserver:

@@ -1,9 +1,9 @@
 """Testy operacji administracyjnych: CRUD trenerów/klientów, eksport płatności."""
 import pytest
 from datetime import date, timedelta
-from models import User, Trainer, Member, Payment, ContactOption
+from models import User, Trainer, Member, Payment, ContactOption, WaitlistEntry
 from services import UserService, SubscriptionFactory
-from tests.conftest import make_user, make_member, make_trainer, make_class
+from tests.conftest import make_user, make_member, make_trainer, make_class, make_session
 
 
 def login_admin(client, db):
@@ -182,6 +182,42 @@ class TestContact:
         client.post('/admin/contact/new', data={'label': 'X', 'value': 'Y'},
                     follow_redirects=True)
         assert ContactOption.query.count() == 0
+
+
+class TestMemberDeleteCascade:
+    def test_delete_member_removes_waitlist_and_payments(self, client, db):
+        login_admin(client, db)
+        cu = make_user(db, 'k.del', 'pass123', 'client')
+        m = make_member(db, cu)
+        tu = make_user(db, 't.del', 'pass123', 'trainer')
+        t = make_trainer(db, tu)
+        c = make_class(db, t)
+        s = make_session(db, c, delta_days=3)
+        db.session.add(WaitlistEntry(member_id=m.id, session_id=s.id))
+        db.session.add(Payment(member_id=m.id, amount=99.0, month_year='2026-06',
+                               status='completed', transfer_number='TRF-0000-0000-0000'))
+        db.session.commit()
+        mid = m.id
+        resp = client.post(f'/admin/members/{mid}/delete', follow_redirects=True)
+        assert 'usunięty' in resp.data.decode()
+        assert db.session.get(Member, mid) is None
+        assert WaitlistEntry.query.filter_by(member_id=mid).count() == 0
+        assert Payment.query.filter_by(member_id=mid).count() == 0
+
+    def test_delete_class_with_waitlist_ok(self, client, db):
+        login_admin(client, db)
+        cu = make_user(db, 'k.w', 'pass123', 'client')
+        m = make_member(db, cu)
+        tu = make_user(db, 't.w', 'pass123', 'trainer')
+        t = make_trainer(db, tu)
+        c = make_class(db, t)
+        s = make_session(db, c, delta_days=3)
+        db.session.add(WaitlistEntry(member_id=m.id, session_id=s.id))
+        db.session.commit()
+        cid = c.id
+        resp = client.post(f'/admin/classes/{cid}/delete', follow_redirects=True)
+        assert 'usunięte' in resp.data.decode()
+        assert WaitlistEntry.query.count() == 0
 
 
 class TestPaymentsExport:

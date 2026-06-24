@@ -49,6 +49,23 @@ class TestBookingService:
         assert ok is False
         assert 'przeszł' in msg.lower()
 
+    def test_book_inactive_subscription_rejected(self, db, setup):
+        setup['member'].subscription_end = date.today() - timedelta(days=1)
+        db.session.commit()
+        ok, msg = BookingService.book(setup['member'].id, setup['session'].id)
+        assert ok is False
+        assert 'karnet' in msg.lower()
+        assert Booking.query.filter_by(status='confirmed').count() == 0
+
+    def test_book_session_after_subscription_end_rejected(self, db, setup):
+        # karnet aktywny dziś, ale sesja wypada już po jego końcu
+        setup['member'].subscription_end = date.today() + timedelta(days=1)
+        far = make_session(db, setup['class'], delta_days=10)
+        db.session.commit()
+        ok, msg = BookingService.book(setup['member'].id, far.id)
+        assert ok is False
+        assert 'karnet' in msg.lower()
+
     def test_book_time_conflict_rejected(self, db, setup):
         # te same zajęcia (ten sam dzień+godzina), inna sesja tej samej daty
         BookingService.book(setup['member'].id, setup['session'].id)

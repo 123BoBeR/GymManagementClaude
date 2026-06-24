@@ -343,6 +343,8 @@ def admin_class_members(id):
     # zbierz unikalnych członków z potwierdzonymi rezerwacjami w sesjach tych zajęć
     rows = {}
     for s in gym_class.sessions:
+        if s.cancelled:
+            continue
         for b in s.bookings:
             if b.status != 'confirmed':
                 continue

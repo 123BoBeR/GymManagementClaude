@@ -49,6 +49,7 @@
           {% set booked = s.id in booked_session_ids %}
           {% set on_waitlist = s.id in waitlist_session_ids %}
           {% set wl_count = item.waitlist_counts[s.id] %}
+          {% set covered = item.covered[s.id] %}
           <div class="d-flex align-items-center justify-content-between py-2
                        border-top" style="font-size:.85rem">
             <div>
@@ -70,6 +71,11 @@
               <span class="badge bg-success"><i class="bi bi-check-lg"></i> Zapisany</span>
             {% elif on_waitlist %}
               <span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Na liście</span>
+            {% elif not covered %}
+              <a href="{{ url_for('client.client_dashboard') }}"
+                 class="badge bg-secondary text-decoration-none" title="Karnet nie obejmuje tej daty">
+                <i class="bi bi-lock"></i> Karnet
+              </a>
             {% elif full %}
               <form action="/client/sessions/{{ s.id }}/waitlist" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

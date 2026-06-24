@@ -227,4 +227,170 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 90 testów*
+### SEKCJA 8 — Dziury logiczne (audyt 2026-06-24) · **P0**
+
+> Najwyższy priorytet: rzeczy, które wpływają na faktyczne działanie aplikacji.
+> Każde zadanie domyka się testem.
+
+#### ✅ B29 · Bramka aktywnego karnetu przy rezerwacji — ZROBIONE
+**✅ Wynik:** `book()` i `WaitlistService.join()` odrzucają zapis, gdy karnet nie obejmuje daty sesji (`is_active(member, session_date)`); UI gated w `session_detail` i `classes` (badge „Karnet" → przedłużenie). **+3 testy.**
+**Pliki:** `services.py`, `blueprints/client.py`, `templates/client/{classes,session_detail}.html`, `tests/{test_services,test_waitlist}.py`
+
+**Problem:** `BookingService.book()` nie sprawdza, czy klient ma aktywny karnet — osoba z wygasłym karnetem zapisze się na zajęcia. `is_active()` służy dziś tylko do wyświetlenia statusu na dashboardzie.
+**Zakres:**
+- `BookingService.book()` (i `WaitlistService.join()`) odrzuca zapis, gdy `MemberService.is_active(member)` jest fałszywe — czytelny komunikat („Karnet wygasł — przedłuż, aby się zapisać").
+- Sesja musi mieścić się w okresie ważności karnetu (`session_date <= subscription_end`).
+- UI: ukryć/zablokować przycisk zapisu dla nieaktywnych + link do przedłużenia.
+- Test: nieaktywny klient nie zapisze się; aktywny owszem.
+**Pliki:** `services.py`, `blueprints/client.py`, `templates/client/{classes,session_detail}.html`, `tests/test_bookings.py`
+
+#### ✅ B30 · Odwoływanie pojedynczej sesji (ożywienie `ClassSession.cancelled`) — ZROBIONE
+**✅ Wynik:** Trener odwołuje własną sesję (`POST /trainer/sessions/<id>/cancel`, guard własności + blokada przeszłych/podwójnych); świadomie bez awansu kolejki. Poprawione agregacje uczestników (admin + trener) pomijają odwołane sesje; klient widzi „Sesja odwołana" w rezerwacjach. **+4 testy.** *Odwoływanie po stronie admina odłożone — wymaga widoku sesji admina.*
+**Pliki:** `blueprints/{trainer,admin}.py`, `templates/trainer/sessions.html`, `templates/client/bookings.html`, `tests/test_sessions.py`
+
+**Problem:** Pole `cancelled` istnieje i jest sprawdzane przy rezerwacji oraz filtrowane w widokach, ale **żadna trasa nigdy nie ustawia go na `True`** — nie da się odwołać jednych zajęć (choroba trenera itp.).
+**Zakres:**
+- Trasa admin (`POST /admin/sessions/<id>/cancel`) i trener (`POST /trainer/sessions/<id>/cancel`, guard własności) ustawia `cancelled = True`.
+- Powiadomienie/oznaczenie zapisanych klientów (przy włączonym B42 — notyfikacja; na start: rezerwacje pozostają, ale sesja wyświetla się jako „odwołana").
+- UI: przycisk „Odwołaj sesję" na liście sesji + wyraźne oznaczenie odwołanych.
+- Test: po odwołaniu nie można rezerwować, sesja znika z nadchodzących.
+**Pliki:** `blueprints/admin.py`, `blueprints/trainer.py`, `templates/trainer/sessions.html`, `templates/admin/*`, `tests/`
+
+#### ✅ B31 · Rolling-generacja sesji — ZROBIONE
+**✅ Wynik:** `ensure_future_sessions()` (idempotentne, pomija istniejące/odwołane daty, nie cofa się) + `refresh_all_future_sessions()`. Wyzwalacze: komenda CLI `flask sessions-refresh` (cron) i leniwe wywołanie w `client_classes`. **+3 testy.**
+**Pliki:** `blueprints/sessions.py`, `app.py` (CLI), `blueprints/client.py`, `tests/test_sessions.py`
+
+**Problem:** `generate_sessions()` tworzy 12 tygodni naprzód **tylko przy zatwierdzeniu** zajęć — po ~kwartale zajęcia zostają bez sesji.
+**Zakres:**
+- Funkcja `ensure_future_sessions(gym_class, horizon_weeks=12)` idempotentnie dogenerowuje brakujące sesje do horyzontu (bez duplikatów istniejących dat).
+- Wyzwalacz: komenda CLI (`flask sessions:refresh`) do crona **oraz** lazy-wywołanie przy wejściu na listę zajęć/harmonogram.
+- Test: powtórne wywołanie nie tworzy duplikatów; uzupełnia tylko brakujące.
+**Pliki:** `blueprints/sessions.py`, `app.py` (CLI), `tests/test_sessions.py` (nowy)
+
+#### ⬜ B32 · Spójność płatności przy odnowieniu + unikalność — ODŁOŻONE (parować z B36)
+> Wymaga zmiany schematu (`UniqueConstraint`) + decyzji o znaczeniu `month_year` — najlepiej zrobić razem z migracjami (B36), nie na `drop_all`.
+
+**Problem:** Klient odnawiając zapisuje `Payment` completed, admin odnawiając — nie zapisuje nic (odnowienie „darmowe" w raportach). Brak ograniczenia unikalności `Payment(member_id, month_year)` — możliwe duplikaty.
+**Zakres:**
+- Decyzja + ujednolicenie: odnowienie przez admina również tworzy rozliczoną płatność (lub świadomie oznaczane jako „korekta administracyjna").
+- `UniqueConstraint(member_id, month_year)` na modelu `Payment`; `client renew` i `initiate` nie tworzą duplikatu (upsert).
+- Test: dwa odnowienia w jednym miesiącu = jeden wpis płatności.
+**Pliki:** `models.py`, `blueprints/admin.py`, `blueprints/client.py`, `services.py`, `tests/test_payment.py`
+
+#### ✅ B33 · Kaskady i integralność przy usuwaniu klienta — ZROBIONE
+**✅ Wynik:** Kaskady `delete-orphan` dla `Member→WaitlistEntry/Payment` i `ClassSession→WaitlistEntry`; `PRAGMA foreign_keys=ON` dla SQLite (event listener, bezpieczny dla innych silników). Usunięcie klienta/zajęć nie zostawia osieroconych wierszy ani nie wywala na FK. Wybrana opcja: **usuwanie** płatności wraz z klientem (spójne z twardym delete). **+2 testy.**
+**Pliki:** `models.py`, `extensions.py`, `tests/test_admin.py`
+
+**Problem:** `WaitlistEntry` i `Payment` nie mają kaskady od `Member` — usunięcie klienta zostawia wiszące wpisy (SQLite domyślnie nie egzekwuje FK).
+**Zakres:**
+- Kaskada/`ondelete` dla `WaitlistEntry` (usuń) i `Payment` (decyzja: usuń vs zachowaj jako anonimowe „były klient").
+- Włączyć `PRAGMA foreign_keys=ON` dla SQLite (event listener w `extensions.py`).
+- Test: usunięcie klienta nie zostawia osieroconych wpisów / nie wywala widoku płatności.
+**Pliki:** `models.py`, `extensions.py`, `tests/`
+
+#### 🟡 B34 · Drobne guardy logiki — CZĘŚCIOWO ZROBIONE
+- ✅ **B34a:** Obecność można zapisać tylko dla sesji minionych/dzisiejszych — guard serwerowy w `trainer_attendance` (POST).
+- ⬜ **B34b:** (Opcjonalnie) zabezpieczenie wyścigu pojemności w `book()` — świadomie odłożone (przy SQLite + 1 proces teoretyczne).
+**Pliki:** `blueprints/trainer.py`
+
+---
+
+### SEKCJA 9 — Gotowość produkcyjna i bezpieczeństwo · **P1**
+
+#### ⬜ B35 · Debug i SECRET_KEY za zmiennymi środowiskowymi — DO ZROBIENIA
+**Problem:** `app.run(debug=True)` na sztywno (RCE przez konsolę Werkzeug w produkcji); `SECRET_KEY` ma cichy fallback `'dev-secret-change-me'`.
+**Zakres:** `FLASK_DEBUG` z env (domyślnie wyłączony); fail-fast / ostrzeżenie gdy brak `SECRET_KEY` w trybie nie-dev.
+**Pliki:** `app.py`, `.env.example`, `README.md`
+
+#### ⬜ B36 · Migracje bazy (Flask-Migrate / Alembic) — DO ZROBIENIA
+**Problem:** Tylko `db.create_all()` — każda zmiana schematu wymaga ręcznego dropa. Blokuje bezpieczny rozwój.
+**Zakres:** `Flask-Migrate`, `flask db init`, pierwsza migracja z aktualnego schematu, instrukcja w README.
+**Pliki:** `requirements.txt`, `app.py`, `migrations/`, `README.md`
+
+#### ⬜ B37 · Hardening sesji i nagłówków — DO ZROBIENIA
+**Zakres:** `SESSION_COOKIE_SECURE/SAMESITE/HTTPONLY`, nagłówki bezpieczeństwa (X-Frame-Options, CSP — Flask-Talisman lub ręcznie), wymuszenie HTTPS w produkcji.
+**Pliki:** `app.py`, `requirements.txt`
+
+#### ⬜ B38 · Rate-limiting logowania — DO ZROBIENIA
+**Zakres:** `Flask-Limiter` na `/login` (np. 5 prób/min/IP), czytelny komunikat po przekroczeniu.
+**Pliki:** `app.py`, `blueprints/auth.py`, `requirements.txt`
+
+#### ⬜ B39 · Serwer WSGI + Docker + CI — DO ZROBIENIA
+**Zakres:** `waitress`/`gunicorn` zamiast `app.run`, `Dockerfile` + `docker-compose` (z Postgresem), GitHub Actions uruchamiające `pytest` na push.
+**Pliki:** `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `requirements.txt`, `README.md`
+
+---
+
+### SEKCJA 10 — Nowe funkcje · **P1–P2**
+
+#### ⬜ B40 · Rejestracja klienta (self-signup) — DO ZROBIENIA · P1
+Publiczna trasa `/register` tworząca `User` + `Member` (wybór karnetu, walidacja, auto-login). Dziś klientów zakłada tylko admin.
+**Pliki:** `blueprints/auth.py`, `templates/register.html`, `services.py`, `tests/`
+
+#### ⬜ B41 · Reset hasła („zapomniałem hasła") — DO ZROBIENIA · P1
+Token jednorazowy + strona ustawienia nowego hasła (na start: token w bazie z TTL; e-mail stub/log). Dziś jest tylko zmiana ze starym hasłem i reset przez admina.
+**Pliki:** `models.py`, `blueprints/auth.py`, `templates/`, `tests/`
+
+#### ⬜ B42 · Warstwa powiadomień (pod Observer) — DO ZROBIENIA · P1
+Model `Notification` + „dzwoneczek" w UI; podpięcie pod istniejący Observer: **awans z listy oczekujących**, **wygasający karnet (≤7 dni)**, **potwierdzenie płatności**. Awans z kolejki jest dziś *cichy*.
+**Pliki:** `models.py`, `services.py`, `blueprints/*`, `templates/base.html`, `tests/`
+
+#### ⬜ B43 · Historia obecności klienta — DO ZROBIENIA · P2
+Widok „Moja frekwencja" (był/nieobecny per sesja, % obecności). Trener oznacza, klient dziś tego nie widzi.
+**Pliki:** `blueprints/client.py`, `templates/client/`, `tests/`
+
+#### ⬜ B44 · Raport wynagrodzeń trenerów — DO ZROBIENIA · P2
+`hourly_rate` istnieje, ale nigdzie nie liczy kosztów. Raport: stawka × przeprowadzone sesje/godziny per trener.
+**Pliki:** `blueprints/admin.py`, `templates/admin/`, `tests/`
+
+#### ⬜ B45 · Paginacja list — DO ZROBIENIA · P2
+Paginacja dla członków / płatności / rezerwacji (dziś ładują wszystko naraz).
+**Pliki:** `blueprints/admin.py`, `blueprints/client.py`, `templates/`
+
+---
+
+### SEKCJA 11 — Jakość kodu · **P2**
+
+#### ⬜ B46 · Konsolidacja warstwy serwisowej — DO ZROBIENIA
+Admin/trener operują na modelach wprost; `subscription_end` liczone inline w `admin.py` zamiast przez `MemberService`/Strategy. Przepiąć tworzenie/edycję/odnowienie na serwisy.
+**Pliki:** `blueprints/admin.py`, `blueprints/trainer.py`, `services.py`
+
+#### ⬜ B47 · DRY: wspólne stałe i etykiety — DO ZROBIENIA
+`DAY_ORDER`/`DAYS` zduplikowane w 3 plikach, `_sub_label()` powiela `Strategy.label()`. Wydzielić do jednego modułu; importy lokalne → top-level.
+**Pliki:** `constants.py` (nowy) / `services.py`, `blueprints/*`
+
+---
+
+### SEKCJA 12 — Testy i dokumentacja · **P1**
+
+#### ⬜ B48 · Domknięcie testów — DO ZROBIENIA
+- Trasy trenera (propose/edit/attendance/members) — dziś prawie nietknięte.
+- `generate_sessions` / rolling-generacja (B31).
+- IDOR / autoryzacja między użytkownikami (klient A nie zobaczy płatności/rezerwacji klienta B).
+**Pliki:** `tests/test_trainer.py` (nowy), `tests/test_sessions.py`, `tests/test_auth.py`
+
+#### ⬜ B49 · Aktualizacja dokumentacji — DO ZROBIENIA
+README: liczba testów 67 → **90**, opis nowych funkcji (rejestracja, powiadomienia, migracje), sekcja „uruchomienie produkcyjne". Utrzymać BACKLOG.
+**Pliki:** `README.md`, `BACKLOG.md`
+
+---
+
+## Kolejność realizacji (zalecana, audyt 2026-06-24)
+
+```
+P0 (dziury logiczne):   B29 → B30 → B31 → B32 → B33 → B34
+P1 (produkcja + bazowe): B35 → B36 → B37 → B38 → B39
+                                  ↓
+P1 (funkcje + testy):    B40 → B41 → B42 → B48 → B49
+                                  ↓
+P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
+```
+
+**Twarde zależności:**
+- B36 (migracje) najlepiej **przed** B32/B33 (zmiany schematu: constrainty, kaskady) — żeby zmiany schematu szły migracją, nie dropem.
+- B42 (powiadomienia) wzmacnia B30 (info o odwołaniu) i B41 (reset hasła e-mailem).
+- Każde zadanie z P0 domyka się testem (B48 zbiera resztę).
+
+---
+
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **102 testy** · P0 zrobione: B29, B30, B31, B33, B34a · odłożone: B32 (→B36), B34b*

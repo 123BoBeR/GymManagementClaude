@@ -62,6 +62,13 @@
           <div class="alert alert-success mb-0 py-2" style="font-size:.85rem">
             <i class="bi bi-check-circle-fill me-1"></i> Jesteś zapisany na tę sesję.
           </div>
+        {% elif not sub_covered %}
+          <div class="alert alert-warning mb-2 py-2" style="font-size:.85rem">
+            <i class="bi bi-exclamation-triangle me-1"></i> Twój karnet nie obejmuje tej daty.
+          </div>
+          <a href="{{ url_for('client.client_dashboard') }}" class="btn btn-outline-danger w-100">
+            <i class="bi bi-arrow-repeat me-1"></i> Przedłuż karnet
+          </a>
         {% elif is_full %}
           {% if on_waitlist %}
             <div class="alert alert-info mb-0 py-2" style="font-size:.85rem">Jesteś na liście oczekujących.</div>

@@ -39,6 +39,13 @@ def create_app(test_config=None):
     def page_not_found(e):
         return render_template('404.html'), 404
 
+    @app.cli.command('sessions-refresh')
+    def sessions_refresh():
+        """Dogenerowuje brakujące przyszłe sesje (do uruchamiania z crona)."""
+        from blueprints.sessions import refresh_all_future_sessions
+        n = refresh_all_future_sessions()
+        print(f'Dogenerowano {n} sesji.')
+
     return app
 
 

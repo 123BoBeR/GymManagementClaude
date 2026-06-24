@@ -102,8 +102,12 @@ class WaitlistEntry(db.Model):
     session_id = db.Column(db.Integer, db.ForeignKey('class_sessions.id'), nullable=False)
     added_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    member = db.relationship('Member', backref='waitlist_entries')
-    session = db.relationship('ClassSession', backref='waitlist')
+    member = db.relationship(
+        'Member',
+        backref=db.backref('waitlist_entries', cascade='all, delete-orphan'))
+    session = db.relationship(
+        'ClassSession',
+        backref=db.backref('waitlist', cascade='all, delete-orphan'))
 
 
 class Equipment(db.Model):
@@ -134,4 +138,6 @@ class Payment(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     paid_at = db.Column(db.DateTime)
 
-    member = db.relationship('Member', backref='payments')
+    member = db.relationship(
+        'Member',
+        backref=db.backref('payments', cascade='all, delete-orphan'))

@@ -45,6 +45,9 @@ def client_dashboard():
 @bp.route('/classes')
 @role_required('client')
 def client_classes():
+    from blueprints.sessions import refresh_all_future_sessions
+    refresh_all_future_sessions()   # rolling-generacja: utrzymuje zapas przyszłych sesji
+
     user = db.session.get(User, session['user_id'])
     member = user.member
     today = date.today()
@@ -72,11 +75,16 @@ def client_classes():
             s.id: WaitlistEntry.query.filter_by(session_id=s.id).count()
             for s in upcoming
         }
+        covered = {
+            s.id: MemberService.is_active(member, s.session_date)
+            for s in upcoming
+        }
         classes_data.append({
             'class': c,
             'upcoming': upcoming,
             'booking_counts': booking_counts,
             'waitlist_counts': waitlist_counts,
+            'covered': covered,
         })
 
     return render_template('client/classes.html',
@@ -124,6 +132,7 @@ def client_session_detail(id):
                            is_booked=is_booked, on_waitlist=on_waitlist,
                            is_full=confirmed >= gym_class.max_capacity,
                            is_past=class_session.session_date < date.today(),
+                           sub_covered=MemberService.is_active(member, class_session.session_date),
                            today=date.today())
 
 
