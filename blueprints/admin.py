@@ -2,7 +2,8 @@ import csv
 import io
 from flask import Blueprint, render_template, redirect, url_for, request, flash, Response
 from extensions import db
-from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment, WaitlistEntry
+from models import (User, Member, Trainer, GymClass, ClassSession, Booking,
+                    Equipment, Payment, WaitlistEntry, ContactOption)
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
 from services import (PaymentService, UserService, MemberService,
@@ -521,6 +522,33 @@ def admin_payments():
     members = {m.id: m for m in Member.query.all()}
     return render_template('admin/payments.html', payments=payments,
                            stats=stats, members=members)
+
+
+# ── Opcje kontaktu ────────────────────────────────────────────────────────────
+
+@bp.route('/contact/new', methods=['POST'])
+@role_required('admin')
+def admin_contact_new():
+    label = request.form.get('label', '').strip()
+    value = request.form.get('value', '').strip()
+    icon = request.form.get('icon', '').strip() or 'info-circle'
+    if not label or not value:
+        flash('Etykieta i wartość są wymagane.', 'danger')
+        return redirect(url_for('auth.contact'))
+    db.session.add(ContactOption(label=label, value=value, icon=icon))
+    db.session.commit()
+    flash('Opcja kontaktu dodana.', 'success')
+    return redirect(url_for('auth.contact'))
+
+
+@bp.route('/contact/<int:id>/delete', methods=['POST'])
+@role_required('admin')
+def admin_contact_delete(id):
+    opt = db.get_or_404(ContactOption, id)
+    db.session.delete(opt)
+    db.session.commit()
+    flash('Opcja kontaktu usunięta.', 'success')
+    return redirect(url_for('auth.contact'))
 
 
 # ── Sprzęt ────────────────────────────────────────────────────────────────────

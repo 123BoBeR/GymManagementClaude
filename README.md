@@ -64,6 +64,8 @@ Aplikacja działa pod `http://127.0.0.1:5000`.
 - Logika biznesowa w warstwie serwisowej (`services.py`) — oddzielona od tras
 - Nowoczesne API SQLAlchemy 2.x (`db.get_or_404`, `db.session.get`)
 - Tryb ciemny (toggle w sidebarze, zapamiętany w localStorage, bez migotania)
+- Responsywny layout — off-canvas sidebar z hamburgerem na telefonach, tabele przewijane poziomo
+- Strona **Kontakt** dla wszystkich ról; admin zarządza opcjami kontaktu (dodaj/usuń)
 - Własna strona 404
 
 ### Logowanie i role
@@ -131,6 +133,7 @@ User ──< Member ──< Booking >── ClassSession >── GymClass >─�
 | `WaitlistEntry` | Kolejka oczekujących na pełną sesję; FIFO auto-awans przy anulowaniu |
 | `Payment` | Płatność za miesiąc; status `pending / completed`; numer TRF; data opłacenia |
 | `Equipment` | Inwentarz sprzętu: kategoria, status, data zakupu |
+| `ContactOption` | Dane kontaktowe siłowni (etykieta, wartość, ikona); CRUD po stronie admina |
 
 ---
 

@@ -115,6 +115,14 @@ class Equipment(db.Model):
     purchase_date = db.Column(db.Date)
 
 
+class ContactOption(db.Model):
+    __tablename__ = 'contact_options'
+    id = db.Column(db.Integer, primary_key=True)
+    label = db.Column(db.String(80), nullable=False)     # np. "Recepcja", "Email"
+    value = db.Column(db.String(200), nullable=False)    # np. "+48 500 100 200"
+    icon = db.Column(db.String(40), default='info-circle')  # nazwa ikony Bootstrap
+
+
 class Payment(db.Model):
     __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)

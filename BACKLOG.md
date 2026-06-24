@@ -218,4 +218,13 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 86 testów*
+#### ✅ B28 · Strona Kontakt + responsywność mobilna — ZROBIONE
+- Model `ContactOption` + strona `/contact` dla wszystkich ról (telefon, email, adres, godziny)
+- Admin dodaje/usuwa opcje kontaktu (kontrolki widoczne tylko dla admina); link „Kontakt" w sidebarze
+- Responsywność: off-canvas sidebar z hamburgerem + półprzezroczyste tło na telefonach (≤768px), tabele auto-owijane w `.table-responsive` (przewijanie poziome)
+- Seed z domyślnymi danymi kontaktowymi. **+4 testy.**
+**Pliki:** `models.py`, `blueprints/{auth,admin}.py`, `templates/{contact,base}.html`, `seed.py`, `tests/test_admin.py`
+
+---
+
+*Ostatnia aktualizacja: 2026-06-24 · branch `dev` · 90 testów*

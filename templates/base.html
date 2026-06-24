@@ -70,6 +70,36 @@
     /* layout */
     .main { margin-left: var(--sb); min-height: 100vh; padding: 2rem 2.2rem; }
 
+    /* mobile topbar + backdrop (ukryte na desktopie) */
+    .mobile-topbar { display: none; }
+    .sidebar-backdrop { display: none; }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-100%);
+        transition: transform .25s ease;
+        box-shadow: 0 0 30px rgba(0,0,0,.35);
+        z-index: 100;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; padding: 4.3rem 1rem 1.5rem; }
+      .mobile-topbar {
+        display: flex; align-items: center; gap: .5rem;
+        position: fixed; top: 0; left: 0; right: 0; height: 3.4rem;
+        background: var(--bg-dark); z-index: 90; padding: 0 .8rem;
+      }
+      .mobile-topbar .burger {
+        background: none; border: none; color: #fff; font-size: 1.5rem;
+        line-height: 1; padding: .2rem .5rem; cursor: pointer;
+      }
+      .mobile-topbar .brand { color: #fff; font-weight: 700; font-size: 1.05rem; }
+      .mobile-topbar .brand span { color: var(--accent); }
+      .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 95; }
+      .sidebar-backdrop.show { display: block; }
+      .ph h1 { font-size: 1.2rem; }
+      .ph { margin-bottom: 1rem; }
+    }
+
     /* page header */
     .ph { margin-bottom: 1.5rem; }
     .ph h1 { font-size: 1.45rem; font-weight: 700; color: var(--text); margin: 0; }
@@ -131,6 +161,13 @@
   </style>
 </head>
 <body>
+
+<!-- pasek mobilny z hamburgerem (widoczny tylko na małych ekranach) -->
+<div class="mobile-topbar">
+  <button class="burger" onclick="toggleSidebar()" aria-label="Menu"><i class="bi bi-list"></i></button>
+  <span class="brand"><i class="bi bi-lightning-charge-fill" style="color:var(--accent)"></i> Gym<span>App</span></span>
+</div>
+<div class="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
 <div class="sidebar">
   <div class="sb-logo"><i class="bi bi-lightning-charge-fill" style="color:var(--accent)"></i> Gym<span>App</span></div>
@@ -207,6 +244,11 @@
         <i class="bi bi-person-fill"></i> Profil
       </a>
     {% endif %}
+
+    <div class="sb-section">Pomoc</div>
+    <a href="/contact" class="nav-link {% if request.path == '/contact' %}active{% endif %}">
+      <i class="bi bi-telephone"></i> Kontakt
+    </a>
   </nav>
 
   <div class="sb-footer">
@@ -256,6 +298,22 @@
     applyThemeLabel();
   }
   applyThemeLabel();
+
+  // Sidebar off-canvas na telefonach
+  function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.querySelector('.sidebar-backdrop').classList.toggle('show');
+  }
+
+  // Tabele przewijane poziomo na małych ekranach (auto-wrap w .table-responsive)
+  document.querySelectorAll('table.table').forEach(function (t) {
+    if (!t.closest('.table-responsive')) {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-responsive';
+      t.parentNode.insertBefore(wrap, t);
+      wrap.appendChild(t);
+    }
+  });
 </script>
 </body>
 </html>

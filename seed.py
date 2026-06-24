@@ -1,6 +1,7 @@
 from app import create_app
 from extensions import db
-from models import User, Member, Trainer, GymClass, ClassSession, Booking, Equipment, Payment
+from models import (User, Member, Trainer, GymClass, ClassSession, Booking,
+                    Equipment, Payment, ContactOption)
 from services import PaymentService, SubscriptionFactory
 from blueprints.sessions import generate_sessions
 from datetime import date, datetime
@@ -169,6 +170,16 @@ def seed():
         for name, category, status, purchase_date in equipment_rows:
             db.session.add(Equipment(name=name, category=category,
                                      status=status, purchase_date=purchase_date))
+
+        # ── Dane kontaktowe ──────────────────────────────────────────────────
+        contact_rows = [
+            ('Recepcja',     '+48 500 100 200',          'telephone'),
+            ('Email',        'kontakt@gymapp.pl',        'envelope'),
+            ('Adres',        'ul. Sportowa 1, Warszawa', 'geo-alt'),
+            ('Godziny',      'Pn–Pt 6:00–23:00, Sb–Nd 8:00–20:00', 'clock'),
+        ]
+        for label, value, icon in contact_rows:
+            db.session.add(ContactOption(label=label, value=value, icon=icon))
 
         # ── Płatności (kilka opłaconych + jedna oczekująca) ──────────────────
         payments_rows = [

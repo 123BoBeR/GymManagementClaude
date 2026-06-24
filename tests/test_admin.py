@@ -1,7 +1,7 @@
 """Testy operacji administracyjnych: CRUD trenerów/klientów, eksport płatności."""
 import pytest
 from datetime import date, timedelta
-from models import User, Trainer, Member, Payment
+from models import User, Trainer, Member, Payment, ContactOption
 from services import UserService, SubscriptionFactory
 from tests.conftest import make_user, make_member, make_trainer, make_class
 
@@ -141,6 +141,47 @@ class TestClientCreation:
             'subscription_type': 'monthly',
         }, follow_redirects=True)
         assert db.session.get(Member, mid).subscription_end == expected
+
+
+class TestContact:
+    def test_admin_can_add_and_delete(self, client, db):
+        login_admin(client, db)
+        resp = client.post('/admin/contact/new', data={
+            'label': 'Recepcja', 'value': '+48 500', 'icon': 'telephone',
+        }, follow_redirects=True)
+        assert 'dodana' in resp.data.decode()
+        opt = ContactOption.query.filter_by(label='Recepcja').first()
+        assert opt is not None
+        resp = client.post(f'/admin/contact/{opt.id}/delete', follow_redirects=True)
+        assert 'usunięta' in resp.data.decode()
+        assert ContactOption.query.count() == 0
+
+    def test_add_requires_label_and_value(self, client, db):
+        login_admin(client, db)
+        client.post('/admin/contact/new', data={'label': '', 'value': ''},
+                    follow_redirects=True)
+        assert ContactOption.query.count() == 0
+
+    def test_client_sees_contact_without_admin_controls(self, client, db):
+        cu = make_user(db, 'klient', 'pass123', 'client')
+        make_member(db, cu)
+        db.session.add(ContactOption(label='Email', value='a@b.pl', icon='envelope'))
+        db.session.commit()
+        client.post('/login', data={'username': 'klient', 'password': 'pass123'})
+        resp = client.get('/contact')
+        body = resp.data.decode()
+        assert resp.status_code == 200
+        assert 'a@b.pl' in body
+        assert 'Dodaj opcję kontaktu' not in body
+
+    def test_client_cannot_add_contact(self, client, db):
+        cu = make_user(db, 'klient', 'pass123', 'client')
+        make_member(db, cu)
+        db.session.commit()
+        client.post('/login', data={'username': 'klient', 'password': 'pass123'})
+        client.post('/admin/contact/new', data={'label': 'X', 'value': 'Y'},
+                    follow_redirects=True)
+        assert ContactOption.query.count() == 0
 
 
 class TestPaymentsExport:

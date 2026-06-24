@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
 from extensions import db
-from models import User
+from models import User, ContactOption
 from services import UserService
 
 bp = Blueprint('auth', __name__)
@@ -51,6 +51,14 @@ def change_password():
         if ok:
             return redirect(url_for('auth.index'))
     return render_template('change_password.html')
+
+
+@bp.route('/contact')
+def contact():
+    if 'user_id' not in session:
+        return redirect(url_for('auth.login'))
+    options = ContactOption.query.all()
+    return render_template('contact.html', options=options)
 
 
 @bp.route('/logout')
