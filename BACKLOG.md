@@ -267,10 +267,10 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 - Test: powtórne wywołanie nie tworzy duplikatów; uzupełnia tylko brakujące.
 **Pliki:** `blueprints/sessions.py`, `app.py` (CLI), `tests/test_sessions.py` (nowy)
 
-#### 🟡 B32 · Spójność płatności przy odnowieniu + unikalność — CZĘŚCIOWO ZROBIONE
-**✅ Wynik (behawioralny, bez zmiany schematu):** `PaymentService.record_completed()` (upsert) — jeden miesiąc = jeden wpis; klient i admin renew rejestrują przychód tą samą ścieżką (admin renew wcześniej nie zapisywał nic → „darmowe" w raportach). **+4 testy.**
-**⬜ Pozostaje (→ B36):** `UniqueConstraint(member_id, month_year)` jako twarda gwarancja na poziomie DB — przez migrację. Residual: dwa odnowienia w tym samym miesiącu kalendarzowym = jeden wpis (model `month_year` = miesiąc kalendarzowy).
-**Pliki:** `services.py`, `blueprints/{client,admin}.py`, `tests/{test_payment,test_admin}.py`
+#### ✅ B32 · Spójność płatności przy odnowieniu + unikalność — ZROBIONE
+**✅ Wynik:** `PaymentService.record_completed()` (upsert) — jeden miesiąc = jeden wpis; klient i admin renew rejestrują przychód tą samą ścieżką (admin renew wcześniej nie zapisywał nic → „darmowe" w raportach). `UniqueConstraint(member_id, month_year)` na modelu + w migracji (B36) — twarda gwarancja na poziomie DB. **+5 testów.**
+**Residual (świadomy):** dwa odnowienia w tym samym miesiącu kalendarzowym = jeden wpis (model `month_year` = miesiąc kalendarzowy; pełne rozliczenie per-okres to osobny redesign).
+**Pliki:** `services.py`, `models.py`, `blueprints/{client,admin}.py`, `tests/{test_payment,test_admin}.py`
 
 **Problem:** Klient odnawiając zapisuje `Payment` completed, admin odnawiając — nie zapisuje nic (odnowienie „darmowe" w raportach). Brak ograniczenia unikalności `Payment(member_id, month_year)` — możliwe duplikaty.
 **Zakres:**
@@ -303,10 +303,9 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** `debug` czytany z `FLASK_DEBUG` (domyślnie wyłączony); brak `SECRET_KEY` przy `FLASK_ENV=production` → `RuntimeError` na starcie (dev nadal ma fallback). **+1 test.**
 **Pliki:** `app.py`, `.env.example`, `tests/test_auth.py`
 
-#### ⬜ B36 · Migracje bazy (Flask-Migrate / Alembic) — DO ZROBIENIA
-**Problem:** Tylko `db.create_all()` — każda zmiana schematu wymaga ręcznego dropa. Blokuje bezpieczny rozwój.
-**Zakres:** `Flask-Migrate`, `flask db init`, pierwsza migracja z aktualnego schematu, instrukcja w README.
-**Pliki:** `requirements.txt`, `app.py`, `migrations/`, `README.md`
+#### ✅ B36 · Migracje bazy (Flask-Migrate / Alembic) — ZROBIONE
+**✅ Wynik:** `Flask-Migrate` wpięty (`migrate.init_app(..., render_as_batch=True)` — tryb batch dla SQLite); pierwsza migracja `a5403d93b3fc` z pełnego schematu (10 tabel + `uq_payment_member_month`); instrukcja w README (`flask db upgrade/migrate/current`, `stamp head`).
+**Pliki:** `requirements.txt`, `extensions.py`, `app.py`, `migrations/`, `README.md`
 
 #### ✅ B37 · Hardening sesji i nagłówków — ZROBIONE
 **✅ Wynik:** `SESSION_COOKIE_HTTPONLY=True`, `SAMESITE=Lax`, `SECURE` w produkcji; nagłówki `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` przez `after_request`. **+1 test.**
@@ -394,4 +393,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **108 testów** · zrobione: B29–B31, B32 (behawioralnie), B33, B34a, B35, B37 · pozostaje: B32 constraint (→B36), B34b*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **109 testów** · zrobione: B29–B33, B34a, B35, B36, B37 · pozostaje: B34b, B38–B49*

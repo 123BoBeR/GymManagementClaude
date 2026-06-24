@@ -129,6 +129,9 @@ class ContactOption(db.Model):
 
 class Payment(db.Model):
     __tablename__ = 'payments'
+    __table_args__ = (
+        db.UniqueConstraint('member_id', 'month_year', name='uq_payment_member_month'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     member_id = db.Column(db.Integer, db.ForeignKey('members.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)

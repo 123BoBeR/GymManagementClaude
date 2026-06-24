@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template
 from dotenv import load_dotenv
-from extensions import db, csrf
+from extensions import db, csrf, migrate
 from blueprints.auth import bp as auth_bp
 from blueprints.admin import bp as admin_bp
 from blueprints.trainer import bp as trainer_bp
@@ -43,6 +43,7 @@ def create_app(test_config=None):
         app.config.update(test_config)
 
     db.init_app(app)
+    migrate.init_app(app, db, render_as_batch=True)
     csrf.init_app(app)
 
     app.register_blueprint(auth_bp)

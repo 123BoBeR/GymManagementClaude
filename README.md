@@ -37,6 +37,28 @@ python app.py
 
 Aplikacja działa pod `http://127.0.0.1:5000`.
 
+> `seed.py` tworzy schemat z modeli (`create_all`) i wypełnia danymi demo — wygodne do dewelopmentu.
+> W produkcji schemat zakładaj i rozwijaj migracjami (poniżej), nie `seed.py`.
+
+### 🗄️ Migracje bazy (Flask-Migrate / Alembic)
+
+Schemat jest wersjonowany migracjami. Typowy przepływ:
+
+```bash
+export FLASK_APP=app.py          # Windows PowerShell: $env:FLASK_APP="app.py"
+
+flask db upgrade                 # załóż / zaktualizuj schemat do najnowszej wersji
+flask db migrate -m "opis"       # wygeneruj migrację po zmianie modeli
+flask db current                 # pokaż aktualną wersję
+```
+
+Migracje SQLite działają w trybie *batch* (`render_as_batch=True`) — pozwala to
+dokładać/zmieniać ograniczenia (np. `UniqueConstraint` na płatnościach), których
+SQLite nie obsługuje przez zwykłe `ALTER TABLE`.
+
+Jeśli zseedowałeś bazę przez `seed.py` i chcesz ją oznaczyć jako zmigrowaną:
+`flask db stamp head`.
+
 ### Konta demo
 
 | Rola   | Login                 | Hasło       |

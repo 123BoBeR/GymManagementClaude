@@ -139,3 +139,14 @@ class TestRecordCompleted:
         PaymentService.record_completed(member, '2026-06')
         assert Payment.query.filter_by(member_id=member.id, month_year='2026-06').count() == 1
         assert PaymentService.total_revenue() == 99.0
+
+    def test_duplicate_month_rejected_by_constraint(self, db, member):
+        from sqlalchemy.exc import IntegrityError
+        db.session.add(Payment(member_id=member.id, amount=99.0, month_year='2026-07',
+                               status='completed', transfer_number='TRF-1111-1111-1111'))
+        db.session.commit()
+        db.session.add(Payment(member_id=member.id, amount=99.0, month_year='2026-07',
+                               status='pending', transfer_number='TRF-2222-2222-2222'))
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
