@@ -1,5 +1,5 @@
 import pytest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from app import create_app
 from extensions import db as _db
 from models import User, Member, Trainer, GymClass, ClassSession, Booking, WaitlistEntry
@@ -45,11 +45,13 @@ def make_user(db, username='testuser', password='pass123', role='client'):
 
 
 def make_member(db, user):
+    today = date.today()
     m = Member(
         user_id=user.id,
         first_name='Jan', last_name='Testowy',
         subscription_type='monthly',
-        subscription_end=date.today() + timedelta(days=30),
+        subscription_end=today + timedelta(days=30),
+        joined_at=datetime(today.year, today.month, 1),   # 1. dnia → bez proporcji
     )
     db.session.add(m)
     db.session.flush()

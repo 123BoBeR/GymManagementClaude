@@ -128,18 +128,22 @@ class TestClientCreation:
         }, follow_redirects=True)
         assert db.session.get(Member, mid).subscription_end == SubscriptionFactory.create('annual').extend(None)
 
-    def test_renew_stacks_from_current_end(self, client, db):
+    def test_renew_extends_to_next_period(self, client, db):
+        import calendar
         login_admin(client, db)
         u = make_user(db, 'k.renew', 'pass123', 'client')
         m = make_member(db, u)
-        future = date.today() + timedelta(days=40)   # aktywny w przyszłym miesiącu
-        m.subscription_end = future
+        today = date.today()
+        # aktywny do końca bieżącego miesiąca (realny stan = koniec okresu)
+        m.subscription_end = SubscriptionFactory.create('monthly').extend(None)
         db.session.commit()
         mid = m.id
-        expected = SubscriptionFactory.create('monthly').extend(future)
         client.post(f'/admin/members/{mid}/renew', data={
             'subscription_type': 'monthly',
         }, follow_redirects=True)
+        # przedłużono o jeden okres → koniec następnego miesiąca
+        ny, nm = (today.year + today.month // 12), (today.month % 12 + 1)
+        expected = date(ny, nm, calendar.monthrange(ny, nm)[1])
         assert db.session.get(Member, mid).subscription_end == expected
 
     def test_renew_records_payment(self, client, db):

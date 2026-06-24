@@ -320,8 +320,21 @@ class WaitlistService:
 # ── Service Layer: płatności ─────────────────────────────────────────────────
 
 class PaymentService:
+    """Płatności w modelu okresów rozliczeniowych.
+
+    - miesięczny: okres = miesiąc kalendarzowy; pierwszy (niepełny) miesiąc
+      liczony proporcjonalnie do dni pozostałych,
+    - roczny: okres = pełny rok kotwiczony do miesiąca dołączenia
+      (nie styczeń–grudzień), pełna cena,
+    - dzienny: wejściówka ważna tylko w dniu zakupu.
+
+    Opłacenie okresu przedłuża ważność karnetu do końca tego okresu
+    (jeden mechanizm: płatności i „przedłużenie" to to samo).
+    """
+
     @staticmethod
     def amount_for(member):
+        """Pełna cena karnetu wg typu (bez proporcji)."""
         try:
             return SubscriptionFactory.create(member.subscription_type).price()
         except ValueError:
@@ -332,47 +345,129 @@ class PaymentService:
         parts = [f"{random.randint(0, 9999):04d}" for _ in range(3)]
         return "TRF-" + "-".join(parts)
 
+    # ── Okresy rozliczeniowe ──────────────────────────────────────────────────
+
     @staticmethod
-    def months_for_member(member, count=6):
-        """Ostatnie `count` miesięcy wraz ze statusem płatności."""
-        today = date.today()
-        result = []
-        year, month = today.year, today.month
-        for _ in range(count):
-            my = f"{year:04d}-{month:02d}"
-            payment = Payment.query.filter_by(member_id=member.id, month_year=my).first()
-            result.append({
-                'month_year': my,
-                'amount': PaymentService.amount_for(member),
-                'status': payment.status if payment else 'pending',
+    def _anchor_start(member):
+        """Pierwszy dzień miesiąca dołączenia — kotwica okresów."""
+        j = member.joined_at.date() if member.joined_at else date.today()
+        return date(j.year, j.month, 1)
+
+    @staticmethod
+    def _period_for_index(member, index):
+        """(start, end, key) okresu nr `index` (0 = okres startowy od kotwicy)."""
+        anchor = PaymentService._anchor_start(member)
+        if member.subscription_type == 'annual':
+            start = date(anchor.year + index, anchor.month, 1)
+            end = _add_months(start, 12) - timedelta(days=1)
+        else:
+            start = _add_months(anchor, index)
+            end = _end_of_month(start)
+        return start, end, f"{start.year:04d}-{start.month:02d}"
+
+    @staticmethod
+    def _current_index(member, today=None):
+        """Indeks okresu zawierającego dziś (0 = startowy)."""
+        today = today or date.today()
+        anchor = PaymentService._anchor_start(member)
+        months = (today.year - anchor.year) * 12 + (today.month - anchor.month)
+        if months < 0:
+            return 0
+        return months // 12 if member.subscription_type == 'annual' else months
+
+    @staticmethod
+    def _index_for_key(member, key):
+        y, m = int(key[:4]), int(key[5:7])
+        anchor = PaymentService._anchor_start(member)
+        months = (y - anchor.year) * 12 + (m - anchor.month)
+        if member.subscription_type == 'annual':
+            return months // 12 if months >= 0 else 0
+        return max(months, 0)
+
+    @staticmethod
+    def _period_label(member, start, end):
+        if member.subscription_type == 'annual':
+            return f"{month_label(start)} – {month_label(end)}"
+        return month_label(start)
+
+    @staticmethod
+    def _period_amount(member, index):
+        """Kwota okresu: proporcja tylko dla pierwszego, niepełnego miesiąca
+        karnetu miesięcznego; w pozostałych wypadkach pełna cena."""
+        full = PaymentService.amount_for(member)
+        if member.subscription_type == 'monthly' and index == 0:
+            j = member.joined_at.date() if member.joined_at else None
+            if j and j.day > 1:
+                first = date(j.year, j.month, 1)
+                days_in_month = (_end_of_month(j) - first).days + 1
+                remaining = days_in_month - j.day + 1
+                return round(full * remaining / days_in_month, 2)
+        return full
+
+    @staticmethod
+    def _amount_for_key(member, key):
+        return PaymentService._period_amount(member, PaymentService._index_for_key(member, key))
+
+    @staticmethod
+    def _period_end_for_key(member, key):
+        if member.subscription_type == 'day_pass':
+            return date.today()
+        y, m = int(key[:4]), int(key[5:7])
+        start = date(y, m, 1)
+        if member.subscription_type == 'annual':
+            return _add_months(start, 12) - timedelta(days=1)
+        return _end_of_month(start)
+
+    @staticmethod
+    def payable_periods(member, count=3, today=None):
+        """Najbliższe `count` okresów do opłacenia (bieżący + do przodu).
+
+        Pusta lista dla karnetu dziennego (obsługiwany osobno — wejściówka).
+        Nie pokazuje okresów sprzed dołączenia klienta.
+        """
+        if member.subscription_type == 'day_pass':
+            return []
+        cur = PaymentService._current_index(member, today)
+        periods = []
+        for i in range(cur, cur + count):
+            start, end, key = PaymentService._period_for_index(member, i)
+            payment = Payment.query.filter_by(member_id=member.id, month_year=key).first()
+            periods.append({
+                'index': i, 'start': start, 'end': end, 'key': key,
+                'label': PaymentService._period_label(member, start, end),
+                'amount': PaymentService._period_amount(member, i),
+                'status': payment.status if payment else 'unpaid',
                 'payment_id': payment.id if payment else None,
                 'transfer_number': payment.transfer_number if payment else None,
                 'paid_at': payment.paid_at if payment else None,
             })
-            month -= 1
-            if month == 0:
-                month = 12
-                year -= 1
-        return result
+        return periods
 
     @staticmethod
-    def initiate(member_id, month_year):
+    def _extend_subscription(member, key):
+        """Przedłuża ważność karnetu do końca opłaconego okresu."""
+        end = PaymentService._period_end_for_key(member, key)
+        if member.subscription_end is None or end > member.subscription_end:
+            member.subscription_end = end
+
+    @staticmethod
+    def initiate(member_id, period_key):
         """Tworzy (lub zwraca istniejącą) płatność pending z numerem TRF."""
         member = db.session.get(Member, member_id)
         if member is None:
             return False, {"error": "Klient nie istnieje."}
 
-        existing = Payment.query.filter_by(member_id=member_id, month_year=month_year).first()
+        existing = Payment.query.filter_by(member_id=member_id, month_year=period_key).first()
         if existing and existing.status == 'completed':
-            return False, {"error": "Płatność za ten miesiąc jest już opłacona."}
+            return False, {"error": "Ten okres jest już opłacony."}
 
         if existing:
             payment = existing
         else:
             payment = Payment(
                 member_id=member_id,
-                amount=PaymentService.amount_for(member),
-                month_year=month_year,
+                amount=PaymentService._amount_for_key(member, period_key),
+                month_year=period_key,
                 status='pending',
                 transfer_number=PaymentService.generate_transfer_number(),
             )
@@ -400,6 +495,7 @@ class PaymentService:
         payment.paid_at = datetime.now(timezone.utc)
         member = db.session.get(Member, payment.member_id)
         if member:
+            PaymentService._extend_subscription(member, payment.month_year)
             NotificationService.push(
                 member.user_id,
                 f'Płatność {payment.amount:.0f} zł za {payment.month_year} '
@@ -409,26 +505,57 @@ class PaymentService:
         return True, "Płatność zatwierdzona."
 
     @staticmethod
-    def record_completed(member, month_year=None):
-        """Zapisuje rozliczoną płatność za miesiąc (upsert).
+    def settle_period(member, period_key, amount=None):
+        """Bezpośrednio rozlicza okres (upsert completed) i przedłuża karnet.
 
-        Jeśli płatność za ten miesiąc już istnieje (np. pending z `initiate`),
-        oznacza ją jako completed zamiast tworzyć duplikat. Dzięki temu jeden
-        miesiąc = jeden wpis płatności, niezależnie od ścieżki (klient/admin).
+        Używane przez „Przedłuż" — bez symulacji przelewu (od razu opłacone).
         """
-        month_year = month_year or date.today().strftime('%Y-%m')
+        if amount is None:
+            amount = PaymentService._amount_for_key(member, period_key)
         payment = Payment.query.filter_by(
-            member_id=member.id, month_year=month_year).first()
+            member_id=member.id, month_year=period_key).first()
         if payment is None:
-            payment = Payment(member_id=member.id, month_year=month_year)
+            payment = Payment(member_id=member.id, month_year=period_key)
             db.session.add(payment)
-        payment.amount = PaymentService.amount_for(member)
+        payment.amount = amount
         payment.status = 'completed'
         if not payment.transfer_number:
             payment.transfer_number = PaymentService.generate_transfer_number()
         payment.paid_at = datetime.now(timezone.utc)
+        PaymentService._extend_subscription(member, period_key)
+        NotificationService.push(
+            member.user_id,
+            f'Płatność {amount:.0f} zł za {period_key} została potwierdzona.',
+            icon='check-circle', url='/client/payments')
         db.session.commit()
         return payment
+
+    @staticmethod
+    def settle_next_period(member):
+        """Opłaca najbliższy okres przedłużający ważność (przycisk „Przedłuż").
+
+        Wybiera pierwszy nieopłacony okres, którego koniec wykracza poza obecną
+        ważność karnetu — dzięki temu „przedłuż" zawsze faktycznie przedłuża.
+        """
+        if member.subscription_type == 'day_pass':
+            key = date.today().strftime('%Y-%m')
+            p = PaymentService.settle_period(member, key, PaymentService.amount_for(member))
+            return {'key': key, 'amount': p.amount, 'end': date.today()}
+
+        coverage = member.subscription_end or (date.today() - timedelta(days=1))
+        cur = PaymentService._current_index(member)
+        for i in range(cur, cur + 24):
+            start, end, key = PaymentService._period_for_index(member, i)
+            payment = Payment.query.filter_by(member_id=member.id, month_year=key).first()
+            if (payment is None or payment.status != 'completed') and end > coverage:
+                amount = PaymentService._period_amount(member, i)
+                PaymentService.settle_period(member, key, amount)
+                return {'key': key, 'amount': amount, 'end': end}
+        # awaryjnie: bieżący okres
+        start, end, key = PaymentService._period_for_index(member, cur)
+        amount = PaymentService._period_amount(member, cur)
+        PaymentService.settle_period(member, key, amount)
+        return {'key': key, 'amount': amount, 'end': end}
 
     @staticmethod
     def total_revenue():

@@ -197,10 +197,25 @@ def client_profile_edit():
 def client_payments():
     user = db.session.get(User, session['user_id'])
     member = user.member
-    months = PaymentService.months_for_member(member, count=6)
-    amount = PaymentService.amount_for(member)
-    return render_template('client/payments.html', member=member, months=months,
-                           amount=amount, sub_label=_sub_label(member.subscription_type))
+    is_daypass = member.subscription_type == 'day_pass'
+    periods = PaymentService.payable_periods(member, count=3)
+    day_amount = PaymentService.amount_for(member) if is_daypass else None
+    return render_template('client/payments.html', member=member, periods=periods,
+                           is_daypass=is_daypass, day_amount=day_amount,
+                           sub_label=_sub_label(member.subscription_type))
+
+
+@bp.route('/payments/daypass', methods=['POST'])
+@role_required('client')
+def client_buy_daypass():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    if member.subscription_type != 'day_pass':
+        flash('Wejściówka dotyczy tylko karnetu dziennego.', 'warning')
+        return redirect(url_for('client.client_payments'))
+    p = PaymentService.settle_next_period(member)
+    flash(f'Wejściówka na dziś opłacona ({p["amount"]:.0f} zł).', 'success')
+    return redirect(url_for('client.client_payments'))
 
 
 @bp.route('/payments/initiate', methods=['POST'])
@@ -255,13 +270,17 @@ def client_subscription_renew():
     member = user.member
 
     sub_type = request.form.get('subscription_type', member.subscription_type)
-    # Model miesięczny: dolicza okres do bieżącej ważności (cyklicznie)
-    new_end = MemberService.renew_subscription(member, sub_type)
+    if sub_type != member.subscription_type:
+        member.subscription_type = sub_type
+        db.session.commit()
 
-    # Zapisz opłatę jako rozliczoną (upsert: bez duplikatu względem `initiate`)
-    amount = PaymentService.amount_for(member)
-    PaymentService.record_completed(member)
+    # Jeden mechanizm: „przedłuż" = opłać najbliższy okres (przedłuża ważność).
+    period = PaymentService.settle_next_period(member)
 
-    flash(f'Karnet przedłużony — aktywny do końca {month_label(new_end)} '
-          f'({_sub_label(sub_type)}, {amount:.0f} zł).', 'success')
+    if member.subscription_type == 'day_pass':
+        flash(f'Wejściówka na dziś opłacona ({period["amount"]:.0f} zł).', 'success')
+    else:
+        flash(f'Opłacono okres ({_sub_label(member.subscription_type)}, '
+              f'{period["amount"]:.0f} zł) — karnet aktywny do końca '
+              f'{month_label(member.subscription_end)}.', 'success')
     return redirect(url_for('client.client_dashboard'))

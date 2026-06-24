@@ -362,6 +362,20 @@ Admin/trener operują na modelach wprost; `subscription_end` liczone inline w `a
 
 ---
 
+### SEKCJA 13 — Feedback: model płatności (okresy rozliczeniowe)
+
+#### ✅ B50 · Płatności w okresach rozliczeniowych + proporcja — ZROBIONE
+**Zgłoszenie:** pełna kwota za niepełny pierwszy miesiąc; pokazywane miesiące „wstecz" sprzed konta; roczny pokazywał miesiące (zmieniała się tylko cena); połowa roku = pełna kwota roczna.
+**✅ Wynik:**
+- **Miesięczny:** okresy = miesiące kalendarzowe; pierwszy, niepełny miesiąc liczony **proporcjonalnie** do dni (np. 23,10 zł zamiast 99); pokazywane **3 okresy do przodu**, bez miesięcy sprzed dołączenia.
+- **Roczny:** okresy = pełny rok **kotwiczony do miesiąca dołączenia** (nie I–XII); pełna cena bez proporcji; **3 najbliższe okresy** (np. „styczeń 2026 – grudzień 2026", kolejne lata).
+- **Dzienny:** bez listy okresów — przycisk „kup wejściówkę na dziś".
+- **Jeden mechanizm:** opłacenie okresu przedłuża ważność karnetu do końca okresu; „Przedłuż" i opłacanie to ta sama ścieżka (`settle_period`/`settle_next_period`); `confirm` też przedłuża.
+- `payable_periods` zastąpiło `months_for_member`; `record_completed` → `settle_period`. Bez zmiany schematu. **+~10 testów (132 łącznie).**
+**Pliki:** `services.py`, `blueprints/{client,admin}.py`, `templates/client/payments.html`, `tests/{conftest,test_payment,test_admin}.py`
+
+---
+
 ### SEKCJA 12 — Testy i dokumentacja · **P1**
 
 #### ⬜ B48 · Domknięcie testów — DO ZROBIENIA
@@ -394,4 +408,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **125 testów** · zrobione: B29–B33, B34a, B35–B37, B40–B42 · pozostaje: B34b, B38, B43–B49, B39 (📌 sam koniec)*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **132 testy** · zrobione: B29–B33, B34a, B35–B37, B40–B42, B50 · pozostaje: B34b, B38, B43–B49, B39 (📌 sam koniec)*
