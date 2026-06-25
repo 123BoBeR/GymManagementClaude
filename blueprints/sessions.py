@@ -1,11 +1,7 @@
 from datetime import date, timedelta
 from extensions import db
 from models import ClassSession
-
-DAY_MAP = {
-    'Poniedziałek': 0, 'Wtorek': 1, 'Środa': 2, 'Czwartek': 3,
-    'Piątek': 4, 'Sobota': 5, 'Niedziela': 6,
-}
+from constants import DAY_MAP
 
 
 def _first_occurrence(gym_class):

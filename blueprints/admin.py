@@ -7,13 +7,12 @@ from models import (User, Member, Trainer, GymClass, ClassSession, Booking,
 from blueprints.utils import role_required
 from blueprints.sessions import generate_sessions
 from services import (PaymentService, UserService, MemberService,
-                      SubscriptionFactory, month_label as _month_label)
+                      subscription_label, month_label as _month_label)
+from constants import DAY_ORDER
 from datetime import datetime, date, timedelta
 from collections import defaultdict
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
-
-DAY_ORDER = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
 
 
 @bp.route('/')
@@ -92,7 +91,6 @@ def admin_members_export():
     writer = csv.writer(output)
     writer.writerow(['ID', 'Imię', 'Nazwisko', 'Login', 'Telefon',
                      'Karnet', 'Ważny do', 'Status', 'Data dołączenia'])
-    sub_labels = {'monthly': 'Miesięczny', 'annual': 'Roczny', 'day_pass': 'Dzienny'}
     today = date.today()
     for m in members:
         status = 'Aktywny' if m.subscription_end and m.subscription_end >= today else 'Wygasły'
@@ -102,7 +100,7 @@ def admin_members_export():
             m.last_name,
             m.user.username,
             m.phone or '',
-            sub_labels.get(m.subscription_type, m.subscription_type),
+            subscription_label(m.subscription_type),
             m.subscription_end.strftime('%d.%m.%Y') if m.subscription_end else '',
             status,
             m.joined_at.strftime('%d.%m.%Y') if m.joined_at else '',
@@ -165,7 +163,7 @@ def admin_member_new():
             phone=request.form.get('phone', ''),
             subscription_type=sub_type,
             # Ważność liczona automatycznie wg typu (model miesięczny)
-            subscription_end=SubscriptionFactory.create(sub_type).extend(None),
+            subscription_end=MemberService.fresh_subscription_end(sub_type),
         )
         db.session.add(member)
         db.session.commit()
@@ -187,7 +185,7 @@ def admin_member_edit(id):
         member.subscription_type = new_type
         # Zmiana typu karnetu = przeliczenie ważności od bieżącego miesiąca
         if new_type != old_type:
-            member.subscription_end = SubscriptionFactory.create(new_type).extend(None)
+            member.subscription_end = MemberService.fresh_subscription_end(new_type)
         db.session.commit()
         flash('Dane zaktualizowane.', 'success')
         return redirect(url_for('admin.admin_members'))

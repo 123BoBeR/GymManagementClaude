@@ -155,6 +155,14 @@ class SubscriptionFactory:
         return [strategy_cls() for strategy_cls in cls._registry.values()]
 
 
+def subscription_label(code):
+    """Polska etykieta karnetu wg kodu (np. 'monthly' → 'Miesięczny')."""
+    try:
+        return SubscriptionFactory.create(code).label()
+    except ValueError:
+        return code
+
+
 # ── Observer: powiadomienia o zwolnieniu miejsca ─────────────────────────────
 
 class BookingObserver(ABC):
@@ -683,17 +691,9 @@ class MemberService:
         return True, "Dane zaktualizowane."
 
     @staticmethod
-    def renew_subscription(member, sub_type, today=None):
-        """Przedłuża karnet o jeden okres (Strategy + Factory).
-
-        Cyklicznie: jeśli karnet jeszcze aktywny — dolicza do bieżącej ważności,
-        w przeciwnym razie liczy od bieżącego miesiąca.
-        """
-        strategy = SubscriptionFactory.create(sub_type)
-        member.subscription_type = sub_type
-        member.subscription_end = strategy.extend(member.subscription_end, today)
-        db.session.commit()
-        return member.subscription_end
+    def fresh_subscription_end(sub_type):
+        """Data ważności nowego karnetu danego typu (od bieżącego okresu)."""
+        return SubscriptionFactory.create(sub_type).extend(None)
 
     @staticmethod
     def is_active(member, on_date=None):

@@ -3,12 +3,12 @@ from extensions import db
 from models import User, GymClass, ClassSession, Booking, WaitlistEntry
 from blueprints.utils import role_required
 from services import (BookingService, WaitlistService, PaymentService,
-                      MemberService, NotificationService, month_label)
+                      MemberService, NotificationService, subscription_label,
+                      month_label)
+from constants import DAY_ORDER
 from datetime import date, timedelta
 
 bp = Blueprint('client', __name__, url_prefix='/client')
-
-DAY_ORDER = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
 
 
 @bp.route('/')
@@ -213,7 +213,7 @@ def client_payments():
     day_amount = PaymentService.amount_for(member) if is_daypass else None
     return render_template('client/payments.html', member=member, periods=periods,
                            is_daypass=is_daypass, day_amount=day_amount,
-                           sub_label=_sub_label(member.subscription_type))
+                           sub_label=subscription_label(member.subscription_type))
 
 
 @bp.route('/payments/daypass', methods=['POST'])
@@ -268,10 +268,6 @@ def client_payment_confirm(id):
     return redirect(url_for('client.client_payments'))
 
 
-def _sub_label(sub_type):
-    return {'monthly': 'Miesięczny', 'annual': 'Roczny', 'day_pass': 'Dzienny'}.get(sub_type, sub_type)
-
-
 # ── Przedłużanie karnetu przez klienta ───────────────────────────────────────
 
 @bp.route('/subscription/renew', methods=['POST'])
@@ -291,7 +287,7 @@ def client_subscription_renew():
     if member.subscription_type == 'day_pass':
         flash(f'Wejściówka na dziś opłacona ({period["amount"]:.0f} zł).', 'success')
     else:
-        flash(f'Opłacono okres ({_sub_label(member.subscription_type)}, '
+        flash(f'Opłacono okres ({subscription_label(member.subscription_type)}, '
               f'{period["amount"]:.0f} zł) — karnet aktywny do końca '
               f'{month_label(member.subscription_end)}.', 'success')
     return redirect(url_for('client.client_dashboard'))

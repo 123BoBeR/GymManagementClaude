@@ -2,12 +2,10 @@ from flask import Blueprint, render_template, redirect, url_for, request, sessio
 from extensions import db
 from models import User, GymClass, ClassSession, Booking
 from blueprints.utils import role_required
+from constants import DAY_ORDER
 from datetime import datetime, date, timedelta
 
 bp = Blueprint('trainer', __name__, url_prefix='/trainer')
-
-DAY_ORDER = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
-DAYS = ['Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota', 'Niedziela']
 
 
 @bp.route('/')
@@ -79,7 +77,7 @@ def trainer_propose_class():
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         except ValueError:
             flash('Nieprawidłowa data startu.', 'danger')
-            return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS)
+            return render_template('trainer/class_propose.html', trainer=trainer, days=DAY_ORDER)
 
         gym_class = GymClass(
             trainer_id=trainer.id,
@@ -98,7 +96,7 @@ def trainer_propose_class():
         flash('Propozycja zajęć wysłana do zatwierdzenia przez administratora.', 'success')
         return redirect(url_for('trainer.trainer_schedule'))
 
-    return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS)
+    return render_template('trainer/class_propose.html', trainer=trainer, days=DAY_ORDER)
 
 
 @bp.route('/sessions')
@@ -221,7 +219,7 @@ def trainer_class_edit(id):
         db.session.commit()
         return redirect(url_for('trainer.trainer_schedule'))
 
-    return render_template('trainer/class_propose.html', trainer=trainer, days=DAYS, edit=gym_class)
+    return render_template('trainer/class_propose.html', trainer=trainer, days=DAY_ORDER, edit=gym_class)
 
 
 @bp.route('/classes/<int:id>/members')

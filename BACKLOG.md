@@ -352,13 +352,13 @@ Paginacja dla członków / płatności / rezerwacji (dziś ładują wszystko nar
 
 ### SEKCJA 11 — Jakość kodu · **P2**
 
-#### ⬜ B46 · Konsolidacja warstwy serwisowej — DO ZROBIENIA
-Admin/trener operują na modelach wprost; `subscription_end` liczone inline w `admin.py` zamiast przez `MemberService`/Strategy. Przepiąć tworzenie/edycję/odnowienie na serwisy.
-**Pliki:** `blueprints/admin.py`, `blueprints/trainer.py`, `services.py`
+#### ✅ B46 · Konsolidacja warstwy serwisowej — ZROBIONE
+**✅ Wynik:** Usunięty martwy `MemberService.renew_subscription` (po B50 nieużywany); `subscription_end` w admin create/edit liczony przez `MemberService.fresh_subscription_end()` zamiast inline; nieużywany import `SubscriptionFactory` z admin.py wycięty.
+**Pliki:** `services.py`, `blueprints/admin.py`, `tests/test_services.py`
 
-#### ⬜ B47 · DRY: wspólne stałe i etykiety — DO ZROBIENIA
-`DAY_ORDER`/`DAYS` zduplikowane w 3 plikach, `_sub_label()` powiela `Strategy.label()`. Wydzielić do jednego modułu; importy lokalne → top-level.
-**Pliki:** `constants.py` (nowy) / `services.py`, `blueprints/*`
+#### ✅ B47 · DRY: wspólne stałe i etykiety — ZROBIONE
+**✅ Wynik:** `constants.py` z `DAY_ORDER` + `DAY_MAP`; `DAY_ORDER`/`DAYS` z 3 blueprintów i `DAY_MAP` z `sessions.py` przepięte na wspólny moduł. `_sub_label()` i dict etykiet w admin → jeden `subscription_label()` (przez `Strategy.label()`).
+**Pliki:** `constants.py` (nowy), `services.py`, `blueprints/{admin,client,trainer,sessions}.py`
 
 ---
 
