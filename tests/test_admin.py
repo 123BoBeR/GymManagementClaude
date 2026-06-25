@@ -273,3 +273,19 @@ class TestPayroll:
         resp = client.get('/admin/payroll')
         assert resp.status_code == 200
         assert 'Wynagrodzenia' in resp.data.decode()
+
+
+class TestPagination:
+    def test_payments_split_across_pages(self, client, db):
+        login_admin(client, db)
+        u = make_user(db, 'k.pg', 'pass123', 'client'); m = make_member(db, u)
+        for i in range(18):                                  # 18 płatności, unikalne month_year
+            year, month = 2024 + i // 12, i % 12 + 1
+            db.session.add(Payment(member_id=m.id, amount=99.0,
+                                   month_year=f'{year:04d}-{month:02d}', status='completed',
+                                   transfer_number=f'TRF-{i:04d}-0000-0000'))
+        db.session.commit()
+        page1 = client.get('/admin/payments').data.decode()
+        page2 = client.get('/admin/payments?page=2').data.decode()
+        assert page1.count('TRF-') == 15                     # per_page=15
+        assert page2.count('TRF-') == 3

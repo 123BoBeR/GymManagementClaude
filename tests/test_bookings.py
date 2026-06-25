@@ -114,6 +114,17 @@ class TestBooking:
         resp = book(client, s2.id)
         assert 'Konflikt terminów' in resp.data.decode()
 
+    def test_bookings_paginated(self, client, db, setup):
+        member, gym_class = setup['member'], setup['class']
+        for i in range(18):
+            make_booking(db, member, make_session(db, gym_class, delta_days=i + 1))
+        db.session.commit()
+        login(client, 'klient', 'pass')
+        page1 = client.get('/client/bookings?status=all').data.decode()
+        page2 = client.get('/client/bookings?status=all&page=2').data.decode()
+        assert page1.count('Anuluj') == 15                   # per_page=15
+        assert page2.count('Anuluj') == 3
+
 
 class TestWaitlist:
     def test_join_waitlist_when_full(self, client, db):

@@ -521,18 +521,21 @@ def admin_payments_export():
 @bp.route('/payments')
 @role_required('admin')
 def admin_payments():
-    payments = (Payment.query
-                .order_by(Payment.status, Payment.month_year.desc())
-                .all())
-    completed = [p for p in payments if p.status == 'completed']
+    from sqlalchemy import func
+    page = request.args.get('page', 1, type=int)
+    pagination = (Payment.query
+                  .order_by(Payment.status, Payment.month_year.desc())
+                  .paginate(page=page, per_page=15, error_out=False))
+    # statystyki liczone agregatami (nad całością, nie tylko bieżącą stroną)
     stats = {
-        'total_revenue': sum(p.amount for p in completed),
-        'completed_count': len(completed),
-        'pending_count': len(payments) - len(completed),
+        'total_revenue': db.session.query(func.coalesce(func.sum(Payment.amount), 0))
+                           .filter(Payment.status == 'completed').scalar(),
+        'completed_count': Payment.query.filter_by(status='completed').count(),
+        'pending_count': Payment.query.filter(Payment.status != 'completed').count(),
     }
     # mapowanie member_id -> member dla wyświetlenia nazwiska
     members = {m.id: m for m in Member.query.all()}
-    return render_template('admin/payments.html', payments=payments,
+    return render_template('admin/payments.html', pagination=pagination,
                            stats=stats, members=members)
 
 

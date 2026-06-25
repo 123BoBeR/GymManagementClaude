@@ -292,7 +292,7 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 #### 🟡 B34 · Drobne guardy logiki — CZĘŚCIOWO ZROBIONE
 - ✅ **B34a:** Obecność można zapisać tylko dla sesji minionych/dzisiejszych — guard serwerowy w `trainer_attendance` (POST).
-- ⬜ **B34b:** (Opcjonalnie) zabezpieczenie wyścigu pojemności w `book()` — świadomie odłożone (przy SQLite + 1 proces teoretyczne).
+- ✋ **B34b:** wyścig pojemności w `book()` — **zaakceptowane (won't-fix)**: realny fix wymaga blokady wiersza/transakcji niedostępnej sensownie w SQLite single-process; przy obecnym wdrożeniu czysto teoretyczny. Do rewizji przy przejściu na PostgreSQL.
 **Pliki:** `blueprints/trainer.py`
 
 ---
@@ -344,9 +344,9 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** `/admin/payroll` — koszt pracy = stawka × godziny minionych, nieodwołanych sesji (per trener + suma). `trainer_payroll()` w `services.py`. Link w sidebarze. **+2 testy.**
 **Pliki:** `services.py`, `blueprints/admin.py`, `templates/admin/payroll.html`, `templates/base.html`, `tests/test_admin.py`
 
-#### ⬜ B45 · Paginacja list — DO ZROBIENIA · P2
-Paginacja dla członków / płatności / rezerwacji (dziś ładują wszystko naraz).
-**Pliki:** `blueprints/admin.py`, `blueprints/client.py`, `templates/`
+#### ✅ B45 · Paginacja list — ZROBIONE · P2
+**✅ Wynik:** Paginacja (per_page=15) dla płatności admina i rezerwacji klienta (z zachowaniem filtra statusu) przez `query.paginate()`; wspólne makro `_macros.html → pagination_nav`; statystyki płatności liczone agregatami nad całością. Listy z JS-live-search (członkowie/sprzęt/trenerzy) świadomie bez paginacji serwerowej. **+2 testy.**
+**Pliki:** `blueprints/{admin,client}.py`, `templates/_macros.html`, `templates/admin/payments.html`, `templates/client/bookings.html`, `tests/{test_admin,test_bookings}.py`
 
 ---
 
@@ -408,4 +408,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **137 testów** · zrobione: B29–B33, B34a, B35–B37, B40–B44, B50 · pozostaje: B34b, B38, B45–B49, B39 (📌 sam koniec)*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **138 testów** · zrobione: B29–B33, B34a, B35–B38, B40–B47, B50 · B34b won't-fix · pozostaje: B48–B49 (prezentacja), B39 (📌 sam koniec)*

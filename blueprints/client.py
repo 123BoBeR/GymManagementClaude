@@ -150,9 +150,11 @@ def client_bookings():
     elif status_filter == 'cancelled':
         query = query.filter_by(status='cancelled')
     # 'all' → bez filtra statusu
-    bookings = query.order_by(Booking.booked_at.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    pagination = (query.order_by(Booking.booked_at.desc())
+                  .paginate(page=page, per_page=15, error_out=False))
 
-    return render_template('client/bookings.html', member=member, bookings=bookings,
+    return render_template('client/bookings.html', member=member, pagination=pagination,
                            status_filter=status_filter, today=date.today())
 
 
