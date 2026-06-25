@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Wynagrodzenia — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-cash-coin me-2" style="color:#e94560"></i>Wynagrodzenia trenerów</h1>
+  <p>Koszt pracy = stawka godzinowa × godziny przeprowadzonych (minionych) sesji.</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-md-4">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#fee2e2;color:#b91c1c"><i class="bi bi-wallet2"></i></div>
+        <div>
+          <div class="val">{{ '%.0f'|format(total) }} zł</div>
+          <div class="lbl">Łączny koszt pracy</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h5><i class="bi bi-person-badge me-2" style="color:#e94560"></i>Per trener</h5>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Trener</th>
+          <th>Specjalizacja</th>
+          <th class="text-end">Sesje</th>
+          <th class="text-end">Godziny</th>
+          <th class="text-end">Stawka</th>
+          <th class="text-end pe-3">Koszt</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td class="ps-3 fw-semibold">{{ r.trainer.first_name }} {{ r.trainer.last_name }}</td>
+          <td class="text-muted">{{ r.trainer.specialization or '—' }}</td>
+          <td class="text-end">{{ r.sessions }}</td>
+          <td class="text-end">{{ '%.1f'|format(r.hours) }} h</td>
+          <td class="text-end text-muted">{{ '%.0f'|format(r.rate) }} zł/h</td>
+          <td class="text-end pe-3 fw-semibold">{{ '%.2f'|format(r.cost) }} zł</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if rows %}
+      <tfoot>
+        <tr class="table-light">
+          <td class="ps-3 fw-bold" colspan="5">Razem</td>
+          <td class="text-end pe-3 fw-bold">{{ '%.2f'|format(total) }} zł</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

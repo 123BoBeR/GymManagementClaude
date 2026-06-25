@@ -336,13 +336,13 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** Model `Notification` + `NotificationService` (push/for_user/unread_count/mark_all_read/notify_expiring). Podpięcia: **awans z kolejki** (Observer — koniec „cichego" awansu), **potwierdzenie płatności** (`PaymentService.confirm`), **wygasający karnet ≤7 dni** (dashboard, z dedupem). „Dzwonek" z licznikiem w sidebarze (context processor) + strona `/notifications` z „oznacz przeczytane". Migracja `ece940d7a6fe`. **+7 testów.**
 **Pliki:** `models.py`, `services.py`, `app.py`, `blueprints/{auth,client}.py`, `templates/{base,notifications}.html`, `migrations/`, `tests/test_notifications.py`
 
-#### ⬜ B43 · Historia obecności klienta — DO ZROBIENIA · P2
-Widok „Moja frekwencja" (był/nieobecny per sesja, % obecności). Trener oznacza, klient dziś tego nie widzi.
-**Pliki:** `blueprints/client.py`, `templates/client/`, `tests/`
+#### ✅ B43 · Historia obecności klienta — ZROBIONE · P2
+**✅ Wynik:** Strona „Moja frekwencja" (`/client/attendance`) — minione sesje z obecnością (był/nieobecny/nieoznaczone) + karty statystyk i % frekwencji. `BookingService.past_attendance` + `attendance_summary`. Link w sidebarze. **+3 testy.**
+**Pliki:** `services.py`, `blueprints/client.py`, `templates/client/attendance.html`, `templates/base.html`, `tests/test_services.py`
 
-#### ⬜ B44 · Raport wynagrodzeń trenerów — DO ZROBIENIA · P2
-`hourly_rate` istnieje, ale nigdzie nie liczy kosztów. Raport: stawka × przeprowadzone sesje/godziny per trener.
-**Pliki:** `blueprints/admin.py`, `templates/admin/`, `tests/`
+#### ✅ B44 · Raport wynagrodzeń trenerów — ZROBIONE · P2
+**✅ Wynik:** `/admin/payroll` — koszt pracy = stawka × godziny minionych, nieodwołanych sesji (per trener + suma). `trainer_payroll()` w `services.py`. Link w sidebarze. **+2 testy.**
+**Pliki:** `services.py`, `blueprints/admin.py`, `templates/admin/payroll.html`, `templates/base.html`, `tests/test_admin.py`
 
 #### ⬜ B45 · Paginacja list — DO ZROBIENIA · P2
 Paginacja dla członków / płatności / rezerwacji (dziś ładują wszystko naraz).
@@ -408,4 +408,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **132 testy** · zrobione: B29–B33, B34a, B35–B37, B40–B42, B50 · pozostaje: B34b, B38, B43–B49, B39 (📌 sam koniec)*
+*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **137 testów** · zrobione: B29–B33, B34a, B35–B37, B40–B44, B50 · pozostaje: B34b, B38, B45–B49, B39 (📌 sam koniec)*

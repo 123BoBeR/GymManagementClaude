@@ -144,3 +144,47 @@ class TestUserService:
     def test_change_password_mismatch(self, db, setup):
         ok, msg = UserService.change_password(setup['user'], 'pass', 'newpass', 'inne')
         assert ok is False
+
+
+class TestAttendance:
+    def _client_with_past(self, db):
+        u = make_user(db, 'k', 'pass', 'client'); m = make_member(db, u)
+        tu = make_user(db, 't', 'pass', 'trainer'); t = make_trainer(db, tu)
+        c = make_class(db, t)
+        return m, t, c
+
+    def test_summary_counts(self, db):
+        m, t, c = self._client_with_past(db)
+        s1 = make_session(db, c, delta_days=-3)
+        s2 = make_session(db, c, delta_days=-2)
+        s3 = make_session(db, c, delta_days=-1)
+        make_booking(db, m, s1).attended = True
+        make_booking(db, m, s2).attended = False
+        make_booking(db, m, s3)                      # nieoznaczone
+        db.session.commit()
+        stats = BookingService.attendance_summary(m)
+        assert stats['total'] == 3
+        assert stats['attended'] == 1
+        assert stats['absent'] == 1
+        assert stats['unmarked'] == 1
+        assert stats['pct'] == 50                    # 1 z 2 oznaczonych
+
+    def test_excludes_future_and_cancelled(self, db):
+        m, t, c = self._client_with_past(db)
+        make_booking(db, m, make_session(db, c, delta_days=3))          # przyszła
+        past_cancelled = make_session(db, c, delta_days=-1)
+        past_cancelled.cancelled = True
+        make_booking(db, m, past_cancelled)
+        db.session.commit()
+        assert BookingService.attendance_summary(m)['total'] == 0
+
+    def test_page_renders(self, client, db):
+        u = make_user(db, 'klient', 'pass', 'client'); m = make_member(db, u)
+        tu = make_user(db, 't', 'pass', 'trainer'); t = make_trainer(db, tu)
+        c = make_class(db, t)
+        make_booking(db, m, make_session(db, c, delta_days=-1)).attended = True
+        db.session.commit()
+        client.post('/login', data={'username': 'klient', 'password': 'pass'})
+        resp = client.get('/client/attendance')
+        assert resp.status_code == 200
+        assert 'frekwencj' in resp.data.decode().lower()

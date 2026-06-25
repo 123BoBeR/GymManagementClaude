@@ -211,6 +211,9 @@
       <a href="/admin/reports" class="nav-link {% if '/admin/reports' in request.path %}active{% endif %}">
         <i class="bi bi-bar-chart-fill"></i> Raporty
       </a>
+      <a href="/admin/payroll" class="nav-link {% if '/admin/payroll' in request.path %}active{% endif %}">
+        <i class="bi bi-cash-coin"></i> Wynagrodzenia
+      </a>
     {% elif session.role == 'trainer' %}
       <a href="/trainer/" class="nav-link {% if request.path == '/trainer/' %}active{% endif %}">
         <i class="bi bi-speedometer2"></i> Dashboard
@@ -236,6 +239,9 @@
       </a>
       <a href="/client/bookings" class="nav-link {% if '/client/bookings' in request.path %}active{% endif %}">
         <i class="bi bi-bookmark-check-fill"></i> Rezerwacje
+      </a>
+      <a href="/client/attendance" class="nav-link {% if '/client/attendance' in request.path %}active{% endif %}">
+        <i class="bi bi-person-check"></i> Frekwencja
       </a>
       <a href="/client/payments" class="nav-link {% if '/client/payments' in request.path %}active{% endif %}">
         <i class="bi bi-credit-card-2-front-fill"></i> Płatności

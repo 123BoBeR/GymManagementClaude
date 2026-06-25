@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Moja frekwencja — GymApp{% endblock %}
+
+{% block content %}
+<div class="ph">
+  <h1><i class="bi bi-person-check me-2" style="color:#e94560"></i>Moja frekwencja</h1>
+  <p>Twoja obecność na minionych zajęciach (oznaczana przez trenera).</p>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#eef2ff;color:#6366f1"><i class="bi bi-calendar-check"></i></div>
+        <div><div class="val">{{ stats.total }}</div><div class="lbl">Minione sesje</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#dcfce7;color:#15803d"><i class="bi bi-check-lg"></i></div>
+        <div><div class="val">{{ stats.attended }}</div><div class="lbl">Obecności</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#fee2e2;color:#b91c1c"><i class="bi bi-x-lg"></i></div>
+        <div><div class="val">{{ stats.absent }}</div><div class="lbl">Nieobecności</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="d-flex align-items-center gap-3">
+        <div class="ico" style="background:#fef9c3;color:#92400e"><i class="bi bi-percent"></i></div>
+        <div>
+          <div class="val">{% if stats.pct is not none %}{{ stats.pct }}%{% else %}—{% endif %}</div>
+          <div class="lbl">Frekwencja</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if bookings %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Data</th>
+          <th>Zajęcia</th>
+          <th>Trener</th>
+          <th>Obecność</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td class="ps-3">{{ b.session.session_date.strftime('%d.%m.%Y') }}</td>
+          <td class="fw-semibold">{{ b.session.gym_class.name }}</td>
+          <td class="text-muted">
+            {{ b.session.gym_class.trainer.first_name }} {{ b.session.gym_class.trainer.last_name }}
+          </td>
+          <td>
+            {% if b.attended is true %}
+              <span class="badge bg-success"><i class="bi bi-check-lg"></i> Był/a</span>
+            {% elif b.attended is false %}
+              <span class="badge bg-danger"><i class="bi bi-x-lg"></i> Nieobecny/a</span>
+            {% else %}
+              <span class="badge bg-secondary">Nieoznaczone</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+      Brak minionych sesji.
+      <a href="/client/classes" class="ms-1">Zapisz się na zajęcia →</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -17,8 +17,8 @@ from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone, timedelta
 
 from extensions import db
-from models import (User, Member, GymClass, ClassSession, Booking, WaitlistEntry,
-                    Payment, PasswordResetToken, Notification)
+from models import (User, Member, Trainer, GymClass, ClassSession, Booking,
+                    WaitlistEntry, Payment, PasswordResetToken, Notification)
 
 
 def _slugify(text):
@@ -276,6 +276,31 @@ class BookingService:
             return True, ("Rezerwacja anulowana. Miejsce przekazano pierwszej "
                           "osobie z listy oczekujących.")
         return True, "Rezerwacja anulowana."
+
+    @staticmethod
+    def past_attendance(member, today=None):
+        """Potwierdzone rezerwacje na minione sesje (najnowsze pierwsze)."""
+        today = today or date.today()
+        return (Booking.query.filter_by(member_id=member.id, status='confirmed')
+                .join(ClassSession)
+                .filter(ClassSession.session_date <= today,
+                        ClassSession.cancelled == False)
+                .order_by(ClassSession.session_date.desc()).all())
+
+    @staticmethod
+    def attendance_summary(member, today=None):
+        """Statystyki frekwencji klienta na minionych sesjach."""
+        past = BookingService.past_attendance(member, today)
+        attended = sum(1 for b in past if b.attended is True)
+        absent = sum(1 for b in past if b.attended is False)
+        marked = attended + absent
+        return {
+            'total': len(past),
+            'attended': attended,
+            'absent': absent,
+            'unmarked': len(past) - marked,
+            'pct': round(attended / marked * 100) if marked else None,
+        }
 
 
 # ── Service Layer: lista oczekujących ────────────────────────────────────────
@@ -609,6 +634,38 @@ class NotificationService:
             icon='hourglass-split', url='/client/')
         db.session.commit()
         return note
+
+
+# ── Raport: wynagrodzenia trenerów ───────────────────────────────────────────
+
+def trainer_payroll(today=None):
+    """Koszt pracy trenerów = stawka × godziny przeprowadzonych sesji.
+
+    Liczone są minione, nieodwołane sesje zatwierdzonych zajęć
+    (godziny = liczba sesji × czas trwania zajęć).
+    """
+    today = today or date.today()
+    rows = []
+    for t in Trainer.query.all():
+        hours = 0.0
+        sessions_count = 0
+        for c in t.classes:
+            if c.status != 'approved':
+                continue
+            past = [s for s in c.sessions
+                    if s.session_date <= today and not s.cancelled]
+            sessions_count += len(past)
+            hours += len(past) * (c.duration_minutes or 0) / 60
+        rate = t.hourly_rate or 0
+        rows.append({
+            'trainer': t,
+            'sessions': sessions_count,
+            'hours': round(hours, 1),
+            'rate': rate,
+            'cost': round(hours * rate, 2),
+        })
+    rows.sort(key=lambda r: r['cost'], reverse=True)
+    return rows
 
 
 # ── Service Layer: członkowie ────────────────────────────────────────────────

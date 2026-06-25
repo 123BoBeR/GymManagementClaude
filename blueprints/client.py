@@ -165,6 +165,17 @@ def client_cancel(id):
     return redirect(url_for('client.client_bookings'))
 
 
+@bp.route('/attendance')
+@role_required('client')
+def client_attendance():
+    user = db.session.get(User, session['user_id'])
+    member = user.member
+    bookings = BookingService.past_attendance(member)
+    stats = BookingService.attendance_summary(member)
+    return render_template('client/attendance.html', member=member,
+                           bookings=bookings, stats=stats)
+
+
 @bp.route('/profile')
 @role_required('client')
 def client_profile():

@@ -451,6 +451,15 @@ def admin_reports():
                            ranking=ranking)
 
 
+@bp.route('/payroll')
+@role_required('admin')
+def admin_payroll():
+    from services import trainer_payroll
+    rows = trainer_payroll()
+    total = sum(r['cost'] for r in rows)
+    return render_template('admin/payroll.html', rows=rows, total=total)
+
+
 # ── Kolejka oczekujących ──────────────────────────────────────────────────────
 
 @bp.route('/waitlist')

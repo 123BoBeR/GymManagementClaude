@@ -249,3 +249,27 @@ class TestPaymentsExport:
         body = resp.data.decode('utf-8-sig')
         assert 'Numer przelewu' in body
         assert 'TRF-1234-5678-9012' in body
+
+
+class TestPayroll:
+    def test_payroll_computes_cost(self, db):
+        from services import trainer_payroll
+        u = make_user(db, 't.pay', 'pass123', 'trainer')
+        t = make_trainer(db, u)                        # hourly_rate=100
+        c = make_class(db, t, status='approved')       # duration=60 min
+        make_session(db, c, delta_days=-2)
+        make_session(db, c, delta_days=-1)
+        make_session(db, c, delta_days=3)              # przyszła → nieliczona
+        db.session.commit()
+        row = next(r for r in trainer_payroll() if r['trainer'].id == t.id)
+        assert row['sessions'] == 2
+        assert row['hours'] == 2.0                     # 2 sesje × 60 min
+        assert row['cost'] == 200.0                    # 2 h × 100 zł
+
+    def test_payroll_page_renders(self, client, db):
+        login_admin(client, db)
+        u = make_user(db, 't.pay2', 'pass123', 'trainer'); make_trainer(db, u)
+        db.session.commit()
+        resp = client.get('/admin/payroll')
+        assert resp.status_code == 200
+        assert 'Wynagrodzenia' in resp.data.decode()
