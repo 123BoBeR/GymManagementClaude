@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, session, flash
-from extensions import db
+from extensions import db, limiter
 from models import User, ContactOption
 from services import UserService, SubscriptionFactory, NotificationService
 
@@ -25,6 +25,7 @@ def index():
 
 
 @bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if 'user_id' in session:
         return redirect(url_for('auth.index'))

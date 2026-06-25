@@ -311,9 +311,9 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** `SESSION_COOKIE_HTTPONLY=True`, `SAMESITE=Lax`, `SECURE` w produkcji; nagłówki `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` przez `after_request`. **+1 test.**
 **Pliki:** `app.py`, `tests/test_auth.py`
 
-#### ⬜ B38 · Rate-limiting logowania — DO ZROBIENIA
-**Zakres:** `Flask-Limiter` na `/login` (np. 5 prób/min/IP), czytelny komunikat po przekroczeniu.
-**Pliki:** `app.py`, `blueprints/auth.py`, `requirements.txt`
+#### ✅ B38 · Rate-limiting logowania — ZROBIONE
+**✅ Wynik:** `Flask-Limiter` (`limiter` w `extensions.py`, `init_app` w `app.py`) — `@limiter.limit("10 per minute")` na `/login`; własna strona 429 (`429.html`). Wyłączony w testach (`RATELIMIT_ENABLED=False`). Zweryfikowany na żywo (10 żądań → 429; bez CSRF brute-force i tak dostaje 400). *Produkcyjnie: skonfigurować storage (np. Redis) zamiast in-memory — nota do README/B49.*
+**Pliki:** `extensions.py`, `app.py`, `blueprints/auth.py`, `templates/429.html`, `requirements.txt`, `tests/conftest.py`
 
 #### ⬜ B39 · Serwer WSGI + Docker + CI — DO ZROBIENIA · 📌 NA SAM KONIEC (wykończeniówka)
 > **Decyzja (2026-06-25):** Docker/konteneryzacja to wykończeniówka — robimy ją jako **ostatnie zadanie projektu**, po wszystkich funkcjach i poprawkach. Nie zaczynać wcześniej.
