@@ -222,7 +222,7 @@ Chart.js · pytest
 | Liczba commitów (`dev`) | 45 |
 | Liczba testów | 154 (z 0 → 16 → 51 → 138 → 154) |
 | Role użytkowników | 3 (admin, trener, klient) |
-| Modele danych | 11 |
+| Modele danych | 12 |
 | Wzorce projektowe | 5 (Strategy, Factory, Observer, Service Layer, Decorator) |
 
 ---

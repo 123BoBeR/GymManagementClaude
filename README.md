@@ -147,6 +147,9 @@ Logika biznesowa żyje w `services.py` i jest faktycznie wywoływana z blueprint
 
 ## 🗃️ Model danych
 
+> 📊 Pełny diagram ERD (12 tabel, wszystkie kolumny i relacje) renderujący się na
+> GitHubie: **[DATABASE.md](DATABASE.md)**.
+
 ```
 User ──< Member ──< Booking >── ClassSession >── GymClass >── Trainer
           │       < WaitlistEntry >──┘                    │
