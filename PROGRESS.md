@@ -146,6 +146,52 @@ i ciągła integracja.
 
 ---
 
+## 🔄 Punkty zwrotne (zmiany kierunku)
+
+W trakcie prac wystąpiło kilka momentów, w których przyjęty kierunek został zmieniony lub
+przepisany — w odróżnieniu od liniowej rozbudowy funkcji. To one najlepiej obrazują ewolucję
+projektu i decyzje projektowe.
+
+### Architektura
+
+- **Monolit → blueprinty** (04.06, `0418305`) — całość kodu znajdowała się początkowo
+  w jednym `app.py`. Refaktoryzacja usunęła z niego 383 linie i rozbiła aplikację na moduły
+  `auth/admin/trainer/client` oraz fabrykę `create_app()`.
+- **Logika w trasach → warstwa serwisowa OOP** (23.06, `ea0891c`) — drugi, większy zwrot:
+  logika biznesowa wpleciona dotąd w trasy Flaska została wydzielona do `services.py`
+  (+383 linie), a trasy przepięte na serwisy ze wzorcami Strategy / Factory / Observer /
+  Service Layer. Przejście z kodu proceduralnego na obiektowy.
+
+### Model domenowy i funkcjonalność
+
+- **Karnet w datach → model miesięczny** (24.06, `f25e972`) — zmiana sposobu liczenia
+  ważności karnetu: z konkretnych dat na rozliczenie w pełnych miesiącach. Wymusiła
+  przepisanie logiki subskrypcji oraz testów.
+- **⭐ Płatności przepisane po feedbacku** (25.06, `63eee8e`) — **najczystszy punkt zwrotny,
+  jedyny wymuszony zewnętrznym feedbackiem** (BACKLOG, „Sekcja 13 — Feedback"). Zgłoszone
+  problemy: pełna kwota za niepełny pierwszy miesiąc, miesiące pokazywane „wstecz" sprzed
+  założenia konta, karnet roczny prezentowany jako miesiące. Efekt: przepisanie na okresy
+  rozliczeniowe z proporcją (`payable_periods` zastąpiło `months_for_member`,
+  `record_completed` → `settle_period`; +189 linii w `services.py`, +100 w testach).
+- **Konta tylko przez admina → samodzielna rejestracja** (25.06, `918c1e9`) — wcześniej konto
+  klienta zakładał wyłącznie admin; dodano publiczny `/register` oraz reset hasła (+524 linie).
+- **„Ciche" awansowanie z kolejki → powiadomienia** (25.06, `75d0a1e`) — awans z listy
+  oczekujących odbywał się bez informowania użytkownika; wprowadzono system powiadomień (Observer).
+
+### Stack — ewolucja, nie rewolucja
+
+Stack nie został dramatycznie przełączony (Flask + SQLite od początku do końca) — przyrastał
+o kolejne biblioteki. Jedyny zwrot wart wyróżnienia:
+
+- **`db.create_all()` → migracje Alembic** (25.06, `4a61854`) — zmiana sposobu zakładania
+  i rozwijania schematu bazy: z generowania z modeli na wersjonowane migracje (Flask-Migrate).
+  W produkcji schemat zakłada się migracjami, nie `seed.py`.
+
+Pozostałe zmiany stacku miały charakter **addytywny**: Flask-WTF (CSRF) i python-dotenv (04.06),
+Flask-Limiter (rate-limiting, 25.06), waitress + Docker (serwer produkcyjny, 26.06).
+
+---
+
 ## Stan obecny (na 2026-06-26)
 
 **Zakres funkcjonalny — trzy role:**
