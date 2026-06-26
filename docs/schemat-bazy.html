@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schemat bazy danych — GymManagement</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 16px;
+    background: #f1f5f9;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #0f172a;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #64748b; font-size: 14px; }
+  .card {
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(15,23,42,.08);
+    padding: 16px; overflow-x: auto;
+  }
+  .card svg { display: block; width: 100%; height: auto; min-width: 760px; }
+  .bar { text-align: center; margin: 18px 0 4px; }
+  button {
+    background: #4f46e5; color: #fff; border: 0; border-radius: 8px;
+    padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  button:hover { background: #4338ca; }
+  footer { text-align: center; color: #94a3b8; font-size: 12px; margin-top: 18px; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .card { box-shadow: none; border: 0; }
+    .bar { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🗃️ Schemat bazy danych — GymManagement</h1>
+    <div class="sub">Diagram związków encji (ERD) · 12 tabel · model relacyjny SQLAlchemy</div>
+  </header>
+
+  <div class="card">
+<svg viewBox="0 0 945 715" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI',system-ui,sans-serif" role="img" aria-label="Diagram ERD bazy danych GymManagement">
+<title>Schemat bazy danych GymManagement — 12 tabel</title>
+<style>
+  .tname{fill:#fff;font-weight:600;font-size:12.5px}
+  .fname{fill:#334155;font-family:'Consolas','SF Mono',monospace;font-size:10.5px}
+  .tag{fill:#64748b;font-family:'Consolas',monospace;font-weight:700;font-size:9px}
+  .rel{stroke:#94a3b8;stroke-width:1.5;fill:none}
+  .lg{fill:#475569;font-size:10.5px}
+  .lgT{fill:#0f172a;font-weight:700;font-size:13px}
+  .lgS{fill:#64748b;font-size:11px}
+</style>
+<defs>
+  <marker id="crow" markerWidth="18" markerHeight="16" refX="15" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+    <path d="M16,1 L2,8 M16,8 L2,8 M16,15 L2,8" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  </marker>
+  <marker id="one" markerWidth="12" markerHeight="16" refX="6" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+    <path d="M6,2 L6,14" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  </marker>
+</defs>
+
+<rect x="1" y="1" width="943" height="713" rx="14" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+
+<text x="22" y="40" class="lgT">Schemat bazy danych</text>
+<text x="22" y="57" class="lgS">GymManagement &#183; 12 tabel</text>
+<rect x="22" y="71" width="12" height="12" rx="2" fill="#4f46e5"/><text x="40" y="81" class="lg">Konta i tożsamość</text>
+<rect x="22" y="91" width="12" height="12" rx="2" fill="#0d9488"/><text x="40" y="101" class="lg">Zajęcia</text>
+<rect x="22" y="111" width="12" height="12" rx="2" fill="#d97706"/><text x="40" y="121" class="lg">Transakcje</text>
+<rect x="22" y="131" width="12" height="12" rx="2" fill="#64748b"/><text x="40" y="141" class="lg">Słownikowe (bez relacji)</text>
+<text x="22" y="168" class="lg">PK główny &#183; FK obcy &#183; UK unikalny</text>
+<line x1="24" y1="182" x2="58" y2="182" class="rel" marker-end="url(#crow)"/><text x="66" y="186" class="lg">relacja 1 : N</text>
+<line x1="24" y1="202" x2="58" y2="202" class="rel" marker-end="url(#one)"/><text x="66" y="206" class="lg">relacja 1 : 0..1</text>
+<text x="22" y="232" class="lgS">USERS — tabela centralna</text>
+
+<path d="M196,341 L250,69"  class="rel" marker-end="url(#crow)"/>
+<path d="M196,341 L250,189" class="rel" marker-end="url(#crow)"/>
+<path d="M196,341 L250,331" class="rel" marker-end="url(#one)"/>
+<path d="M196,341 L250,479" class="rel" marker-end="url(#one)"/>
+<path d="M426,331 L480,331" class="rel" marker-end="url(#crow)"/>
+<path d="M656,331 L710,331" class="rel" marker-end="url(#crow)"/>
+<path d="M426,479 L480,641" class="rel" marker-end="url(#crow)"/>
+<path d="M426,479 L710,486" class="rel" marker-end="url(#crow)"/>
+<path d="M426,479 Q585,468 710,634" class="rel" marker-end="url(#crow)"/>
+<path d="M798,380 L798,430" class="rel" marker-end="url(#crow)"/>
+<path d="M886,331 Q936,482 886,634" class="rel" marker-end="url(#crow)"/>
+
+<rect x="20" y="300" width="176" height="83" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="2.5"/>
+<path d="M20,326 L20,308 Q20,300 28,300 L188,300 Q196,300 196,308 L196,326 Z" fill="#4f46e5"/>
+<text x="32" y="317" class="tname">USERS</text>
+<text y="342"><tspan class="tag" x="32">PK</tspan><tspan class="fname" x="58">id</tspan></text>
+<text y="357"><tspan class="tag" x="32">UK</tspan><tspan class="fname" x="58">username</tspan></text>
+<text y="372"><tspan class="fname" x="58">role</tspan></text>
+
+<rect x="250" y="20" width="176" height="98" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M250,46 L250,28 Q250,20 258,20 L418,20 Q426,20 426,28 L426,46 Z" fill="#4f46e5"/>
+<text x="262" y="37" class="tname">NOTIFICATIONS</text>
+<text y="62"><tspan class="tag" x="262">PK</tspan><tspan class="fname" x="288">id</tspan></text>
+<text y="77"><tspan class="tag" x="262">FK</tspan><tspan class="fname" x="288">user_id</tspan></text>
+<text y="92"><tspan class="fname" x="288">message</tspan></text>
+<text y="107"><tspan class="fname" x="288">read</tspan></text>
+
+<rect x="250" y="140" width="176" height="98" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M250,166 L250,148 Q250,140 258,140 L418,140 Q426,140 426,148 L426,166 Z" fill="#4f46e5"/>
+<text x="262" y="157" class="tname">PASSWORD_RESET_TOKENS</text>
+<text y="182"><tspan class="tag" x="262">PK</tspan><tspan class="fname" x="288">id</tspan></text>
+<text y="197"><tspan class="tag" x="262">FK</tspan><tspan class="fname" x="288">user_id</tspan></text>
+<text y="212"><tspan class="tag" x="262">UK</tspan><tspan class="fname" x="288">token</tspan></text>
+<text y="227"><tspan class="fname" x="288">expires_at</tspan></text>
+
+<rect x="250" y="282" width="176" height="98" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M250,308 L250,290 Q250,282 258,282 L418,282 Q426,282 426,290 L426,308 Z" fill="#4f46e5"/>
+<text x="262" y="299" class="tname">TRAINERS</text>
+<text y="324"><tspan class="tag" x="262">PK</tspan><tspan class="fname" x="288">id</tspan></text>
+<text y="339"><tspan class="tag" x="262">FK</tspan><tspan class="fname" x="288">user_id</tspan></text>
+<text y="354"><tspan class="fname" x="288">specialization</tspan></text>
+<text y="369"><tspan class="fname" x="288">hourly_rate</tspan></text>
+
+<rect x="250" y="430" width="176" height="98" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="1.4"/>
+<path d="M250,456 L250,438 Q250,430 258,430 L418,430 Q426,430 426,438 L426,456 Z" fill="#4f46e5"/>
+<text x="262" y="447" class="tname">MEMBERS</text>
+<text y="472"><tspan class="tag" x="262">PK</tspan><tspan class="fname" x="288">id</tspan></text>
+<text y="487"><tspan class="tag" x="262">FK</tspan><tspan class="fname" x="288">user_id</tspan></text>
+<text y="502"><tspan class="fname" x="288">subscription_type</tspan></text>
+<text y="517"><tspan class="fname" x="288">subscription_end</tspan></text>
+
+<rect x="480" y="20" width="176" height="98" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4"/>
+<path d="M480,46 L480,28 Q480,20 488,20 L648,20 Q656,20 656,28 L656,46 Z" fill="#64748b"/>
+<text x="492" y="37" class="tname">EQUIPMENT</text>
+<text y="62"><tspan class="tag" x="492">PK</tspan><tspan class="fname" x="518">id</tspan></text>
+<text y="77"><tspan class="fname" x="518">name</tspan></text>
+<text y="92"><tspan class="fname" x="518">category</tspan></text>
+<text y="107"><tspan class="fname" x="518">status</tspan></text>
+
+<rect x="480" y="282" width="176" height="98" rx="8" fill="#fff" stroke="#0d9488" stroke-width="1.4"/>
+<path d="M480,308 L480,290 Q480,282 488,282 L648,282 Q656,282 656,290 L656,308 Z" fill="#0d9488"/>
+<text x="492" y="299" class="tname">GYM_CLASSES</text>
+<text y="324"><tspan class="tag" x="492">PK</tspan><tspan class="fname" x="518">id</tspan></text>
+<text y="339"><tspan class="tag" x="492">FK</tspan><tspan class="fname" x="518">trainer_id</tspan></text>
+<text y="354"><tspan class="fname" x="518">name</tspan></text>
+<text y="369"><tspan class="fname" x="518">status</tspan></text>
+
+<rect x="480" y="585" width="176" height="113" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.4"/>
+<path d="M480,611 L480,593 Q480,585 488,585 L648,585 Q656,585 656,593 L656,611 Z" fill="#d97706"/>
+<text x="492" y="602" class="tname">PAYMENTS</text>
+<text y="627"><tspan class="tag" x="492">PK</tspan><tspan class="fname" x="518">id</tspan></text>
+<text y="642"><tspan class="tag" x="492">FK</tspan><tspan class="fname" x="518">member_id</tspan></text>
+<text y="657"><tspan class="fname" x="518">amount</tspan></text>
+<text y="672"><tspan class="tag" x="492">UK</tspan><tspan class="fname" x="518">month_year</tspan></text>
+<text y="687"><tspan class="fname" x="518">status</tspan></text>
+
+<rect x="710" y="20" width="176" height="98" rx="8" fill="#fff" stroke="#64748b" stroke-width="1.4"/>
+<path d="M710,46 L710,28 Q710,20 718,20 L878,20 Q886,20 886,28 L886,46 Z" fill="#64748b"/>
+<text x="722" y="37" class="tname">CONTACT_OPTIONS</text>
+<text y="62"><tspan class="tag" x="722">PK</tspan><tspan class="fname" x="748">id</tspan></text>
+<text y="77"><tspan class="fname" x="748">label</tspan></text>
+<text y="92"><tspan class="fname" x="748">value</tspan></text>
+<text y="107"><tspan class="fname" x="748">icon</tspan></text>
+
+<rect x="710" y="282" width="176" height="98" rx="8" fill="#fff" stroke="#0d9488" stroke-width="1.4"/>
+<path d="M710,308 L710,290 Q710,282 718,282 L878,282 Q886,282 886,290 L886,308 Z" fill="#0d9488"/>
+<text x="722" y="299" class="tname">CLASS_SESSIONS</text>
+<text y="324"><tspan class="tag" x="722">PK</tspan><tspan class="fname" x="748">id</tspan></text>
+<text y="339"><tspan class="tag" x="722">FK</tspan><tspan class="fname" x="748">class_id</tspan></text>
+<text y="354"><tspan class="fname" x="748">session_date</tspan></text>
+<text y="369"><tspan class="fname" x="748">cancelled</tspan></text>
+
+<rect x="710" y="430" width="176" height="113" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.4"/>
+<path d="M710,456 L710,438 Q710,430 718,430 L878,430 Q886,430 886,438 L886,456 Z" fill="#d97706"/>
+<text x="722" y="447" class="tname">BOOKINGS</text>
+<text y="472"><tspan class="tag" x="722">PK</tspan><tspan class="fname" x="748">id</tspan></text>
+<text y="487"><tspan class="tag" x="722">FK</tspan><tspan class="fname" x="748">member_id</tspan></text>
+<text y="502"><tspan class="tag" x="722">FK</tspan><tspan class="fname" x="748">session_id</tspan></text>
+<text y="517"><tspan class="fname" x="748">status</tspan></text>
+<text y="532"><tspan class="fname" x="748">attended</tspan></text>
+
+<rect x="710" y="585" width="176" height="98" rx="8" fill="#fff" stroke="#d97706" stroke-width="1.4"/>
+<path d="M710,611 L710,593 Q710,585 718,585 L878,585 Q886,585 886,593 L886,611 Z" fill="#d97706"/>
+<text x="722" y="602" class="tname">WAITLIST</text>
+<text y="627"><tspan class="tag" x="722">PK</tspan><tspan class="fname" x="748">id</tspan></text>
+<text y="642"><tspan class="tag" x="722">FK</tspan><tspan class="fname" x="748">member_id</tspan></text>
+<text y="657"><tspan class="tag" x="722">FK</tspan><tspan class="fname" x="748">session_id</tspan></text>
+<text y="672"><tspan class="fname" x="748">added_at</tspan></text>
+</svg>
+  </div>
+
+  <div class="bar">
+    <button onclick="window.print()">🖨️ Drukuj / Zapisz jako PDF</button>
+  </div>
+
+  <footer>Wygenerowano z modeli SQLAlchemy (models.py) · projekt GymManagement</footer>
+</div>
+</body>
+</html>
