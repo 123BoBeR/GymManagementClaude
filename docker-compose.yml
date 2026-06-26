@@ -1,0 +1,33 @@
+# Pełny stack produkcyjny: aplikacja (waitress) + PostgreSQL.
+# Uruchomienie:  docker compose up --build
+# Aplikacja:     http://localhost:5000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gym
+      POSTGRES_PASSWORD: gym
+      POSTGRES_DB: gymmanagement
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gym -d gymmanagement"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: production
+      # W realnej produkcji ustaw własny, losowy klucz (np. przez plik .env).
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DATABASE_URL: postgresql://gym:gym@db:5432/gymmanagement
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

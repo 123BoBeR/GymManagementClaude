@@ -315,10 +315,10 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 **✅ Wynik:** `Flask-Limiter` (`limiter` w `extensions.py`, `init_app` w `app.py`) — `@limiter.limit("10 per minute")` na `/login`; własna strona 429 (`429.html`). Wyłączony w testach (`RATELIMIT_ENABLED=False`). Zweryfikowany na żywo (10 żądań → 429; bez CSRF brute-force i tak dostaje 400). *Produkcyjnie: skonfigurować storage (np. Redis) zamiast in-memory — nota do README/B49.*
 **Pliki:** `extensions.py`, `app.py`, `blueprints/auth.py`, `templates/429.html`, `requirements.txt`, `tests/conftest.py`
 
-#### ⬜ B39 · Serwer WSGI + Docker + CI — DO ZROBIENIA · 📌 NA SAM KONIEC (wykończeniówka)
-> **Decyzja (2026-06-25):** Docker/konteneryzacja to wykończeniówka — robimy ją jako **ostatnie zadanie projektu**, po wszystkich funkcjach i poprawkach. Nie zaczynać wcześniej.
-**Zakres:** `waitress`/`gunicorn` zamiast `app.run`, `Dockerfile` + `docker-compose` (z Postgresem), GitHub Actions uruchamiające `pytest` na push.
-**Pliki:** `Dockerfile`, `docker-compose.yml`, `.github/workflows/ci.yml`, `requirements.txt`, `README.md`
+#### ✅ B39 · Serwer WSGI + Docker + CI — ZROBIONE
+**✅ Wynik:** Produkcyjny serwer **waitress** (`wsgi.py` → `wsgi:app`) zamiast `app.run`; `Dockerfile` (python:3.12-slim, `flask db upgrade` + waitress przy starcie, psycopg2 dla Postgresa); `docker-compose.yml` (web + PostgreSQL 16 z healthcheckiem i wolumenem); `.dockerignore`; `.github/workflows/ci.yml` (pytest na push/PR). Zweryfikowano lokalnie: waitress serwuje `/login` → 200, oba pliki YAML parsują się poprawnie.
+**⚠️ Uwaga:** Build obrazu Dockera **nie był zweryfikowany lokalnie** — Docker nie jest zainstalowany na maszynie deweloperskiej. Pliki są standardowe i poprawne składniowo; CI (GitHub Actions) zweryfikuje testy po pushu.
+**Pliki:** `wsgi.py` (nowy), `Dockerfile` (nowy), `docker-compose.yml` (nowy), `.dockerignore` (nowy), `.github/workflows/ci.yml` (nowy), `requirements.txt`, `README.md`
 
 ---
 
@@ -378,14 +378,12 @@ Karnet rozliczany w pełnych miesiącach zamiast w dniach: „aktywny w tym mies
 
 ### SEKCJA 12 — Testy i dokumentacja · **P1**
 
-#### ⬜ B48 · Domknięcie testów — DO ZROBIENIA
-- Trasy trenera (propose/edit/attendance/members) — dziś prawie nietknięte.
-- `generate_sessions` / rolling-generacja (B31).
-- IDOR / autoryzacja między użytkownikami (klient A nie zobaczy płatności/rezerwacji klienta B).
-**Pliki:** `tests/test_trainer.py` (nowy), `tests/test_sessions.py`, `tests/test_auth.py`
+#### ✅ B48 · Domknięcie testów — ZROBIONE
+**✅ Wynik:** Nowy `tests/test_trainer.py` (13 testów: propozycja/edycja zajęć z guardami własności i statusu, obecność z guardem przyszłych sesji, uczestnicy, profil) + `tests/test_authz.py` (3 testy IDOR: klient A nie otworzy/nie potwierdzi płatności klienta B, nie anuluje jego rezerwacji). Rolling-generacja (B31) była już pokryta w `test_sessions.py`. **+16 testów (138 → 154).**
+**Pliki:** `tests/test_trainer.py` (nowy), `tests/test_authz.py` (nowy)
 
-#### ⬜ B49 · Aktualizacja dokumentacji — DO ZROBIENIA
-README: liczba testów 67 → **90**, opis nowych funkcji (rejestracja, powiadomienia, migracje), sekcja „uruchomienie produkcyjne". Utrzymać BACKLOG.
+#### ✅ B49 · Aktualizacja dokumentacji — ZROBIONE
+**✅ Wynik:** README zsynchronizowany z kodem: liczba testów 67 → **154**, tabela 11 plików testowych, opis nowych funkcji (rejestracja, reset hasła, powiadomienia, frekwencja, payroll, paginacja, rate-limiting, płatności w okresach), modele `Notification`/`PasswordResetToken`, hardening produkcyjny, sekcja migracji + Docker + CI, zaktualizowana struktura projektu.
 **Pliki:** `README.md`, `BACKLOG.md`
 
 ---
@@ -408,4 +406,4 @@ P2 (reszta funkcji/jakość): B43 → B44 → B45 → B46 → B47
 
 ---
 
-*Ostatnia aktualizacja: 2026-06-25 · branch `dev` · **138 testów** · zrobione: B29–B33, B34a, B35–B38, B40–B47, B50 · B34b won't-fix · pozostaje: B48–B49 (prezentacja), B39 (📌 sam koniec)*
+*Ostatnia aktualizacja: 2026-06-26 · branch `dev` · **154 testy** · zrobione: B29–B33, B34a, B35–B50 · B34b won't-fix · pozostaje: — (backlog domknięty; Docker do zbudowania na maszynie z zainstalowanym Dockerem)*
