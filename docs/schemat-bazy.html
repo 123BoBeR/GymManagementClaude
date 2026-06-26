@@ -50,17 +50,17 @@
   .tname{fill:#fff;font-weight:600;font-size:12.5px}
   .fname{fill:#334155;font-family:'Consolas','SF Mono',monospace;font-size:10.5px}
   .tag{fill:#64748b;font-family:'Consolas',monospace;font-weight:700;font-size:9px}
-  .rel{stroke:#94a3b8;stroke-width:1.5;fill:none}
+  .rel{stroke:#64748b;stroke-width:1.7;fill:none}
   .lg{fill:#475569;font-size:10.5px}
   .lgT{fill:#0f172a;font-weight:700;font-size:13px}
   .lgS{fill:#64748b;font-size:11px}
 </style>
 <defs>
-  <marker id="crow" markerWidth="18" markerHeight="16" refX="15" refY="8" orient="auto" markerUnits="userSpaceOnUse">
-    <path d="M16,1 L2,8 M16,8 L2,8 M16,15 L2,8" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <marker id="crow" markerWidth="24" markerHeight="22" refX="20" refY="11" orient="auto" markerUnits="userSpaceOnUse">
+    <path d="M21,2 L3,11 M21,11 L3,11 M21,20 L3,11" stroke="#334155" stroke-width="1.9" fill="none"/>
   </marker>
-  <marker id="one" markerWidth="12" markerHeight="16" refX="6" refY="8" orient="auto" markerUnits="userSpaceOnUse">
-    <path d="M6,2 L6,14" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <marker id="one" markerWidth="18" markerHeight="22" refX="15" refY="11" orient="auto" markerUnits="userSpaceOnUse">
+    <path d="M6,3 L6,19 M11,3 L11,19" stroke="#334155" stroke-width="1.9" fill="none"/>
   </marker>
 </defs>
 
@@ -72,22 +72,22 @@
 <rect x="22" y="91" width="12" height="12" rx="2" fill="#0d9488"/><text x="40" y="101" class="lg">Zajęcia</text>
 <rect x="22" y="111" width="12" height="12" rx="2" fill="#d97706"/><text x="40" y="121" class="lg">Transakcje</text>
 <rect x="22" y="131" width="12" height="12" rx="2" fill="#64748b"/><text x="40" y="141" class="lg">Słownikowe (bez relacji)</text>
-<text x="22" y="168" class="lg">PK główny &#183; FK obcy &#183; UK unikalny</text>
-<line x1="24" y1="182" x2="58" y2="182" class="rel" marker-end="url(#crow)"/><text x="66" y="186" class="lg">relacja 1 : N</text>
-<line x1="24" y1="202" x2="58" y2="202" class="rel" marker-end="url(#one)"/><text x="66" y="206" class="lg">relacja 1 : 0..1</text>
-<text x="22" y="232" class="lgS">USERS — tabela centralna</text>
+<text x="22" y="170" class="lg">PK główny &#183; FK obcy &#183; UK unikalny</text>
+<line x1="26" y1="186" x2="60" y2="186" class="rel" marker-end="url(#crow)"/><text x="78" y="190" class="lg">relacja 1 : N</text>
+<line x1="26" y1="208" x2="60" y2="208" class="rel" marker-end="url(#one)"/><text x="78" y="212" class="lg">relacja 1 : 1</text>
+<text x="22" y="238" class="lgS">USERS — tabela centralna</text>
 
-<path d="M196,341 L250,69"  class="rel" marker-end="url(#crow)"/>
-<path d="M196,341 L250,189" class="rel" marker-end="url(#crow)"/>
-<path d="M196,341 L250,331" class="rel" marker-end="url(#one)"/>
-<path d="M196,341 L250,479" class="rel" marker-end="url(#one)"/>
-<path d="M426,331 L480,331" class="rel" marker-end="url(#crow)"/>
-<path d="M656,331 L710,331" class="rel" marker-end="url(#crow)"/>
-<path d="M426,479 L480,641" class="rel" marker-end="url(#crow)"/>
-<path d="M426,479 L710,486" class="rel" marker-end="url(#crow)"/>
-<path d="M426,479 Q585,468 710,634" class="rel" marker-end="url(#crow)"/>
-<path d="M798,380 L798,430" class="rel" marker-end="url(#crow)"/>
-<path d="M886,331 Q936,482 886,634" class="rel" marker-end="url(#crow)"/>
+<path d="M196,325 H212 V69 H250"  class="rel" marker-end="url(#crow)"/>
+<path d="M196,333 H224 V189 H250" class="rel" marker-end="url(#crow)"/>
+<path d="M196,341 H236 V331 H250" class="rel" marker-end="url(#one)"/>
+<path d="M196,357 H220 V479 H250" class="rel" marker-end="url(#one)"/>
+<path d="M426,331 H480"           class="rel" marker-end="url(#crow)"/>
+<path d="M656,331 H710"           class="rel" marker-end="url(#crow)"/>
+<path d="M426,470 H453 V641 H480" class="rel" marker-end="url(#crow)"/>
+<path d="M426,486 H710"           class="rel" marker-end="url(#crow)"/>
+<path d="M338,528 V560 H690 V634 H710" class="rel" marker-end="url(#crow)"/>
+<path d="M798,380 V430"           class="rel" marker-end="url(#crow)"/>
+<path d="M886,331 H916 V634 H886" class="rel" marker-end="url(#crow)"/>
 
 <rect x="20" y="300" width="176" height="83" rx="8" fill="#fff" stroke="#4f46e5" stroke-width="2.5"/>
 <path d="M20,326 L20,308 Q20,300 28,300 L188,300 Q196,300 196,308 L196,326 Z" fill="#4f46e5"/>
